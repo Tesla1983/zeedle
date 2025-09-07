@@ -1,7 +1,12 @@
-import { VerticalBox, Button } from "std-widgets.slint";
+import { VerticalBox, Button, Slider } from "std-widgets.slint";
 
 export component MainWindow inherits Window {
+    width: 400px;
+    height: 200px;
+    title: "Slint Rodio Player";
     in-out property <string> status: "Idle";
+    in-out property <float> progress: 0.0; // 当前播放进度 (秒)
+    in-out property <float> duration: 1.0; // 总时长 (秒)
     callback play(path: string);
     callback pause();
     VerticalBox {
@@ -13,7 +18,7 @@ export component MainWindow inherits Window {
         }
 
         Button {
-            text: "Pause";
+            text: "Pause/Resume";
             clicked => {
                 root.pause();
             }
@@ -21,6 +26,17 @@ export component MainWindow inherits Window {
 
         Text {
             text: root.status;
+        }
+
+        Slider {
+            enabled: false;
+            minimum: 0;
+            maximum: root.duration;
+            value: root.progress;
+        }
+
+        Text {
+            text: "Time: " + root.progress + " / " + root.duration;
         }
     }
 }
