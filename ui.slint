@@ -1,0 +1,26 @@
+import { VerticalBox, Button } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    in-out property <string> status: "Idle";
+    callback play(path: string);
+    callback pause();
+    VerticalBox {
+        Button {
+            text: "Play";
+            clicked => {
+                root.play("audios/写给黄淮.flac");
+            }
+        }
+
+        Button {
+            text: "Pause";
+            clicked => {
+                root.pause();
+            }
+        }
+
+        Text {
+            text: root.status;
+        }
+    }
+}

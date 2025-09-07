@@ -1,0 +1,11 @@
+[package]
+name = "slint-rodio-player"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rodio = "0.20.1"
+slint = "1.13.0"
+
+[build-dependencies]
+slint-build = "1.13.0"
