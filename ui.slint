@@ -1,27 +1,181 @@
-import { VerticalBox, Button, Slider } from "std-widgets.slint";
+import { VerticalBox, Button, Slider, HorizontalBox, GridBox, StandardTableView, ListView } from "std-widgets.slint";
 
-export component MainWindow inherits Window {
-    width: 400px;
-    height: 200px;
-    title: "Slint Rodio Player";
-    in-out property <float> progress; // 当前播放进度 (秒)
-    in-out property <float> duration; // 总时长 (秒)
-    in-out property <string> progress_info_str;
-    callback play(path: string);
-    callback pause();
-    callback change_progress(sec: float);
-    VerticalBox {
-        Button {
-            text: "Play";
-            clicked => {
-                root.play("audios/路过世界的旅行家.mp3");
+export struct SongInfo {
+    song_name:string,
+    singer:string,
+    duration:string,
+}
+
+export component PlayPauseButton inherits Window {
+    in-out property <bool> status;
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback toggled();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => {
+            status = !status;
+            toggled();
+        }
+        if !root.status:
+            Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.30;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.30;
+                y: 0;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: w * 0.50;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.50;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.80;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.80;
+                y: 0;
+            }
+
+            Close { }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+        if root.status:
+            Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: 0.8 * w;
+                y: 0.5 * h;
+            }
+
+            Close { }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
+}
+
+export component SongItem inherits Window {
+    height: 30px;
+    in property <SongInfo> info;
+    callback double_clicked();
+    VerticalLayout {
+        TouchArea {
+            HorizontalLayout {
+                alignment: space-between;
+                Rectangle {
+                    width: 33%;
+                    Text {
+                        text: info.song-name;
+                    }
+                }
+
+                Rectangle {
+                    width: 33%;
+                    Text {
+                        text: info.singer;
+                    }
+                }
+
+                Rectangle {
+                    width: 33%;
+                    Text {
+                        text: info.duration;
+                    }
+                }
+            }
+
+            double-clicked => {
+                double_clicked()
             }
         }
 
-        Button {
-            text: "Pause/Resume";
-            clicked => {
-                root.pause();
+        Path {
+            width: 100%;
+            height: 5px;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 100%;
+                y: 0;
+            }
+
+            stroke: white;
+            stroke-width: 0.1px;
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    width: 750px;
+    height: 500px;
+    title: "Slint Rodio Player";
+    // 当前播放进度 (秒)
+    in-out property <float> progress; 
+    // 总时长 (秒)
+    in-out property <float> duration; 
+    // 当前播放进度文本
+    in-out property <string> progress_info_str;
+    // 播放/暂停状态
+    in-out property <bool> paused;
+    // 歌曲列表
+    in-out property <[SongInfo]> song_list;
+    callback play(path: string);
+    callback toggle_play();
+    callback change_progress(sec: float);
+    VerticalLayout {
+        ListView {
+            height: 80%;
+            width: 100%;
+            for item in root.song_list: SongItem {
+                info: item;
+                double_clicked => {
+                    root.play(item.song-name);
+                }
             }
         }
 
@@ -35,9 +189,22 @@ export component MainWindow inherits Window {
             }
         }
 
+        HorizontalLayout {
+            alignment: center;
+            PlayPauseButton {
+                w: 30;
+                h: 30;
+                status <=> root.paused;
+                toggled => {
+                    root.toggle_play()
+                }
+            }
+        }
+
         Text {
             text: root.progress_info_str;
-            horizontal-alignment: right;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
 }

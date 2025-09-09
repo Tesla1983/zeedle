@@ -4140,6 +4140,7 @@ dependencies = [
 name = "slint-rodio-player"
 version = "0.1.0"
 dependencies = [
+ "glob",
  "rodio",
  "slint",
  "slint-build",

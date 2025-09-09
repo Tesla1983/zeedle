@@ -3,7 +3,7 @@ use std::thread;
 use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, Sink, Source};
-use slint::SharedString;
+use slint::{SharedString, ToSharedString};
 
 slint::include_modules!();
 
@@ -19,8 +19,30 @@ enum PlayerCommand {
 struct PlayerState {
     progress: f32,             // 当前音频播放进度 (秒)
     duration: f32,             // 当前播放音频总时长 (秒)
-    paused: bool,              // 是否处于暂停状态
     progress_info_str: String, // 进度信息字符串
+}
+
+fn read_song_list() -> Vec<SongInfo> {
+    let mut list = Vec::new();
+    for entry in glob::glob("./audios/*.mp3").unwrap() {
+        if let Ok(path) = entry {
+            list.push(SongInfo {
+                song_name: path.display().to_shared_string(),
+                singer: "unknown".to_shared_string(),
+                duration: "05:11".to_shared_string(),
+            });
+        }
+    }
+    for entry in glob::glob("./audios/*.flac").unwrap() {
+        if let Ok(path) = entry {
+            list.push(SongInfo {
+                song_name: path.display().to_shared_string(),
+                singer: "unknown".to_shared_string(),
+                duration: "05:11".to_shared_string(),
+            });
+        }
+    }
+    list
 }
 
 fn make_time_str(secs: f32) -> String {
@@ -78,7 +100,6 @@ fn main() {
                                         let _ = tx_clone.send(PlayerState {
                                             progress: _progress.min(duration),
                                             duration: duration,
-                                            paused: sink_ref.is_paused(),
                                             progress_info_str: format!(
                                                 "{} / {}",
                                                 make_time_str(_progress.min(duration)),
@@ -104,7 +125,6 @@ fn main() {
                         Ok(_) => {
                             let mut prog = progress.lock().unwrap();
                             *prog = new_progress;
-                            dbg!(*prog);
                         }
                         Err(e) => {
                             eprintln!("Failed to seek: {}", e);
@@ -124,7 +144,7 @@ fn main() {
     }
     {
         let tx = tx.clone();
-        ui.on_pause(move || {
+        ui.on_toggle_play(move || {
             tx.send(PlayerCommand::Pause).unwrap();
         });
     }
@@ -152,6 +172,7 @@ fn main() {
             }
         },
     );
-
+    let song_list = read_song_list();
+    ui.set_song_list(song_list.as_slice().into());
     ui.run().unwrap();
 }

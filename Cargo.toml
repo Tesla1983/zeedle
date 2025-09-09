@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+glob = "0.3.3"
 rodio = "0.20.1"
 slint = "1.13.0"
 
