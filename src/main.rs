@@ -75,7 +75,10 @@ fn main() {
     let _listening = listening.clone();
     thread::spawn(move || {
         let mut rng = rand::rng();
-        let mut play_mode = PlayMode::Random;
+        let mut play_mode = PlayMode::InOrder;
+        if let Some(ui) = ui_weak.upgrade() {
+            play_mode = ui.get_play_mode();
+        }
         let song_list = read_song_list();
         let song_list = Arc::new(song_list);
         let mut current_song = song_list.get(0).unwrap().clone();
@@ -192,6 +195,13 @@ fn main() {
                 }
                 PlayerCommand::SwitchMode(m) => {
                     play_mode = m;
+                    let ui_weak = ui_weak.clone();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_play_mode(m);
+                        }
+                    })
+                    .unwrap();
                 }
             }
         }

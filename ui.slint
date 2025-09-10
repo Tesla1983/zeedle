@@ -193,6 +193,138 @@ export component PlayPauseButton inherits Window {
     }
 }
 
+export component InOrderButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.2;
+            }
+
+            MoveTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.8;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
+
+export component RandomButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.7 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.9 * h;
+            }
+
+            // 第二段
+            MoveTo {
+                x: 0;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.3 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.1 * h;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
+
 export component TitleBar inherits Window {
     height: 30px;
     VerticalLayout {
@@ -320,6 +452,8 @@ export component MainWindow inherits Window {
     in-out property <[SongInfo]> song_list;
     // 当前播放歌曲的信息
     in-out property <SongInfo> current_song;
+    // 播放模式
+    in-out property <PlayMode> play_mode;
     callback toggle_play();
     callback play(SongInfo);
     callback play_next();
@@ -369,9 +503,12 @@ export component MainWindow inherits Window {
 
             Rectangle {
                 width: 6%;
-                background: transparent;
-                Button {
-                    text: "Inorder";
+                inorder_btn := InOrderButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    selected: root.play_mode == PlayMode.InOrder;
+                    w: 20;
+                    h: 20;
                     clicked => {
                         switch_mode(PlayMode.InOrder);
                     }
@@ -421,8 +558,12 @@ export component MainWindow inherits Window {
             Rectangle {
                 width: 6%;
                 border-color: transparent;
-                Button {
-                    text: "Random";
+                RandomButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    selected: root.play_mode == PlayMode.Random;
+                    w: 20;
+                    h: 20;
                     clicked => {
                         switch_mode(PlayMode.Random);
                     }
