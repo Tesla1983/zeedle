@@ -97,11 +97,60 @@ export component PlayPauseButton inherits Window {
     }
 }
 
+export component TitleBar inherits Window {
+    height: 30px;
+    VerticalLayout {
+        HorizontalLayout {
+            alignment: space-between;
+            Rectangle {
+                width: 33%;
+                Text {
+                    text: "歌曲";
+                    color: dimgray;
+                }
+            }
+
+            Rectangle {
+                width: 33%;
+                Text {
+                    text: "歌手";
+                    color: dimgray;
+                }
+            }
+
+            Rectangle {
+                width: 33%;
+                Text {
+                    text: "时间";
+                    color: dimgray;
+                }
+            }
+        }
+
+        Path {
+            width: 100%;
+            height: 5px;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 100%;
+                y: 0;
+            }
+
+            stroke: white;
+            stroke-width: 0.3px;
+        }
+    }
+}
+
 export component SongItem inherits Window {
     height: 30px;
     in property <SongInfo> info;
     callback double_clicked();
-    background: area.has-hover ? darkgray : transparent;
+    background: area.has-hover ? rgb(50, 50, 50) : transparent;
     VerticalLayout {
         area := TouchArea {
             double-clicked => {
@@ -171,6 +220,8 @@ export component MainWindow inherits Window {
     callback toggle_play();
     callback change_progress(sec: float);
     VerticalLayout {
+        TitleBar { }
+
         ListView {
             height: 80%;
             width: 100%;
