@@ -8,6 +8,13 @@ export struct SongInfo {
     song_path:string,
 }
 
+// play mode: in order / random
+export enum PlayMode {
+    InOrder,
+    Random,
+}
+
+
 export component NextSongButton inherits Window {
     in-out property <int> w:100;
     in-out property <int> h:100;
@@ -194,6 +201,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "歌曲";
                     color: dimgray;
                 }
@@ -202,6 +210,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "歌手";
                     color: dimgray;
                 }
@@ -210,6 +219,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "时间";
                     color: dimgray;
                 }
@@ -250,6 +260,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.song-name;
                     }
                 }
@@ -257,6 +268,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.singer;
                     }
                 }
@@ -264,6 +276,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.duration;
                     }
                 }
@@ -272,7 +285,7 @@ export component SongItem inherits Window {
 
         Path {
             width: 100%;
-            height: 5px;
+            height: 1px;
             MoveTo {
                 x: 0;
                 y: 0;
@@ -284,7 +297,7 @@ export component SongItem inherits Window {
             }
 
             stroke: white;
-            stroke-width: 0.1px;
+            stroke-width: 0.15px;
         }
     }
 }
@@ -294,22 +307,25 @@ export component MainWindow inherits Window {
     height: 500px;
     title: "Slint Rodio Player";
     // 当前播放进度 (秒)
-    in-out property <float> progress; 
+    in-out property <float> progress:0.0; 
     // 总时长 (秒)
-    in-out property <float> duration; 
+    in-out property <float> duration:1.0; 
     // 当前播放进度文本
-    in-out property <string> progress_info_str;
+    in-out property <string> progress_info_str:"00:00/00:00";
     // 播放/暂停状态
     in-out property <bool> paused:true;
     // 是否正在拖动进度条
-    in-out property <bool> dragging;
+    in-out property <bool> dragging:false;
     // 歌曲列表
     in-out property <[SongInfo]> song_list;
+    // 当前播放歌曲的信息
+    in-out property <SongInfo> current_song;
     callback toggle_play();
     callback play(SongInfo);
     callback play_next();
     callback play_prev();
     callback change_progress(float);
+    callback switch_mode(PlayMode);
     VerticalLayout {
         TitleBar { }
 
@@ -327,7 +343,7 @@ export component MainWindow inherits Window {
         Slider {
             minimum: 0;
             maximum: root.duration;
-            //未知原因：单向绑定无法刷新UI, 只能双向绑定
+            //未知原因: 单向绑定无法刷新UI, 只能双向绑定
             value <=> root.progress;
             released(v) => {
                 root.dragging = false;
@@ -340,37 +356,88 @@ export component MainWindow inherits Window {
 
         HorizontalLayout {
             alignment: center;
-            spacing: 50px;
-            PrevSongButton {
-                w: 20;
-                h: 20;
-                clicked => {
-                    root.play_prev();
+            Rectangle {
+                width: 30%;
+                Text {
+                    x: parent.width / 2 - self.width / 2;
+                    text: current_song.song_name + " - " + current_song.singer;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    wrap: TextWrap.word-wrap;
                 }
             }
 
-            PlayPauseButton {
-                w: 20;
-                h: 20;
-                paused <=> root.paused;
-                toggled => {
-                    root.toggle_play()
+            Rectangle {
+                width: 6%;
+                background: transparent;
+                Button {
+                    text: "Inorder";
+                    clicked => {
+                        switch_mode(PlayMode.InOrder);
+                    }
                 }
             }
 
-            NextSongButton {
-                w: 20;
-                h: 20;
-                clicked => {
-                    root.play_next();
+            Rectangle {
+                width: 6%;
+                PrevSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        root.play_prev();
+                    }
                 }
             }
-        }
 
-        Text {
-            text: root.progress_info_str;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+            Rectangle {
+                width: 6%;
+                PlayPauseButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    paused <=> root.paused;
+                    toggled => {
+                        root.toggle_play()
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                NextSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        root.play_next();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                border-color: transparent;
+                Button {
+                    text: "Random";
+                    clicked => {
+                        switch_mode(PlayMode.Random);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 30%;
+                Text {
+                    x: parent.width / 2 - self.width / 2;
+                    text: root.progress_info_str;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
         }
     }
 }

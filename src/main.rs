@@ -1,19 +1,20 @@
+use rand::Rng;
+use rodio::{Decoder, OutputStream, Sink, Source};
+use slint::ToSharedString;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
-
-use rodio::{Decoder, OutputStream, Sink, Source};
-use slint::ToSharedString;
 
 slint::include_modules!();
 
 // ui --> backend
 enum PlayerCommand {
-    Play(SongInfo),      // 从头播放某个音频文件
-    Pause,               // 暂停/继续播放
-    ChangeProgress(f32), // 拖拽进度条
-    PlayNext,            // 播放下一首
-    PlayPrev,            // 播放上一首
+    Play(SongInfo),       // 从头播放某个音频文件
+    Pause,                // 暂停/继续播放
+    ChangeProgress(f32),  // 拖拽进度条
+    PlayNext,             // 播放下一首
+    PlayPrev,             // 播放上一首
+    SwitchMode(PlayMode), // 切换播放模式
 }
 
 fn read_song_list() -> Vec<SongInfo> {
@@ -64,13 +65,17 @@ fn main() {
     let sink = Arc::new(Mutex::new(Sink::try_new(&handle).unwrap()));
     let progress = Arc::new(Mutex::new(0.0f32));
     let duration = Arc::new(Mutex::new(0.0f32));
+    let listening = Arc::new(Mutex::new(false));
 
     // 播放线程
     let ui_weak = ui.as_weak();
     let sink_clone = sink.clone();
     let _prog = progress.clone();
     let _dura = duration.clone();
+    let _listening = listening.clone();
     thread::spawn(move || {
+        let mut rng = rand::rng();
+        let mut play_mode = PlayMode::Random;
         let song_list = read_song_list();
         let song_list = Arc::new(song_list);
         let mut current_song = song_list.get(0).unwrap().clone();
@@ -87,6 +92,7 @@ fn main() {
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 PlayerCommand::Play(song_info) => {
+                    *_listening.lock().unwrap() = true;
                     current_song = song_info.clone();
                     let file = std::fs::File::open(&song_info.song_path).unwrap();
                     let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
@@ -111,16 +117,29 @@ fn main() {
                             ui.set_progress(0.0);
                             ui.set_progress_info_str("00:00".into());
                             ui.set_paused(false);
+                            ui.set_current_song(song_info);
                         }
                     })
                     .unwrap();
                 }
                 PlayerCommand::Pause => {
                     let _sink = sink_clone.lock().unwrap();
-                    if _sink.is_paused() {
-                        _sink.play();
+                    if _sink.empty() {
+                        // 如果当前没有播放任何歌曲，则播放第一首
+                        let first_song = song_list.get(0).unwrap().clone();
+                        let ui_weak = ui_weak.clone();
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.invoke_play(first_song);
+                            }
+                        })
+                        .unwrap();
                     } else {
-                        _sink.pause();
+                        if _sink.is_paused() {
+                            _sink.play();
+                        } else {
+                            _sink.pause();
+                        }
                     }
                 }
                 PlayerCommand::ChangeProgress(new_progress) => {
@@ -136,7 +155,16 @@ fn main() {
                 }
                 PlayerCommand::PlayNext => {
                     let id = current_song.id as usize;
-                    let next_id = if id + 1 >= song_list.len() { 0 } else { id + 1 };
+                    let next_id = match play_mode {
+                        PlayMode::InOrder => {
+                            if id + 1 >= song_list.len() {
+                                0
+                            } else {
+                                id + 1
+                            }
+                        }
+                        PlayMode::Random => rng.random_range(..song_list.len()),
+                    };
                     if let Some(next_song) = song_list.get(next_id) {
                         let ui_weak = ui_weak.clone();
                         let song_to_play = next_song.clone();
@@ -161,6 +189,9 @@ fn main() {
                         })
                         .unwrap();
                     }
+                }
+                PlayerCommand::SwitchMode(m) => {
+                    play_mode = m;
                 }
             }
         }
@@ -198,6 +229,12 @@ fn main() {
             tx.send(PlayerCommand::PlayPrev).unwrap();
         });
     }
+    {
+        let tx = tx.clone();
+        ui.on_switch_mode(move |play_mode| {
+            tx.send(PlayerCommand::SwitchMode(play_mode)).unwrap();
+        });
+    }
 
     // UI 定时刷新进度条
     let ui_weak = ui.as_weak();
@@ -205,6 +242,7 @@ fn main() {
     let _dura = duration.clone();
     let timer = slint::Timer::default();
     let sink_clone = sink.clone();
+    let listening_clone = listening.clone();
     timer.start(
         slint::TimerMode::Repeated,
         Duration::from_millis(200),
@@ -224,6 +262,9 @@ fn main() {
                     )
                     .into(),
                 );
+                if _sink.empty() && *listening_clone.lock().unwrap() {
+                    ui.invoke_play_next();
+                }
             }
         },
     );
