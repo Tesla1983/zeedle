@@ -14,34 +14,34 @@ enum PlayerCommand {
     ChangeProgress(f32), // 拖拽进度条
 }
 
-// backend --> ui
-#[derive(Clone, Debug)]
-struct PlayerState {
-    progress: f32,             // 当前音频播放进度 (秒)
-    duration: f32,             // 当前播放音频总时长 (秒)
-    progress_info_str: String, // 进度信息字符串
-}
-
 fn read_song_list() -> Vec<SongInfo> {
     let mut list = Vec::new();
-    for entry in glob::glob("./audios/*.mp3").unwrap() {
+    for entry in glob::glob("./audios/*.mp3")
+        .unwrap()
+        .chain(glob::glob("./audios/*.flac").unwrap())
+    {
         if let Ok(path) = entry {
+            let tag = audiotags::Tag::new().read_from_path(&path).unwrap();
+            let file = std::fs::File::open(&path).unwrap();
+            let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
+            let dura = source
+                .total_duration()
+                .map(|d| d.as_secs_f32())
+                .unwrap_or(0.0);
+
             list.push(SongInfo {
-                song_name: path.display().to_shared_string(),
-                singer: "unknown".to_shared_string(),
-                duration: "05:11".to_shared_string(),
+                song_name: tag
+                    .title()
+                    .unwrap_or(path.file_stem().map(|x| x.to_str()).unwrap().unwrap())
+                    .to_shared_string(),
+                singer: tag.artist().unwrap_or("unknown").to_shared_string(),
+                duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
+                    .to_shared_string(),
+                song_path: path.display().to_shared_string(),
             });
         }
     }
-    for entry in glob::glob("./audios/*.flac").unwrap() {
-        if let Ok(path) = entry {
-            list.push(SongInfo {
-                song_name: path.display().to_shared_string(),
-                singer: "unknown".to_shared_string(),
-                duration: "05:11".to_shared_string(),
-            });
-        }
-    }
+
     list
 }
 
@@ -56,75 +56,70 @@ fn main() {
     let ui = MainWindow::new().unwrap();
 
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
-    let (progress_tx, progress_rx) = mpsc::channel::<PlayerState>();
+    let (_stream, handle) = OutputStream::try_default().unwrap();
+    let sink = Arc::new(Mutex::new(Sink::try_new(&handle).unwrap()));
+    let progress = Arc::new(Mutex::new(0.0f32));
+    let duration = Arc::new(Mutex::new(0.0f32));
 
     // 播放线程
+    let ui_weak = ui.as_weak();
+    let sink_clone = sink.clone();
+    let _prog = progress.clone();
+    let _dura = duration.clone();
     thread::spawn(move || {
-        let (_stream, handle) = OutputStream::try_default().unwrap();
-        let mut sink: Arc<Sink> = Arc::new(Sink::try_new(&handle).unwrap());
-        let progress = Arc::new(Mutex::new(0.0f32));
-        let mut duration;
+        let song_list = read_song_list();
+        // 切换到UI线程更新歌曲列表
+        let ui_weak_clone = ui_weak.clone();
+        slint::invoke_from_event_loop(move || {
+            if let Some(ui) = ui_weak_clone.upgrade() {
+                ui.set_song_list(song_list.as_slice().into());
+            }
+        })
+        .unwrap();
 
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 PlayerCommand::Play(path) => {
-                    if let Ok(file) = std::fs::File::open(&path) {
-                        if let Ok(source) = Decoder::new(std::io::BufReader::new(file)) {
-                            duration = source
-                                .total_duration()
-                                .map(|d| d.as_secs_f32())
-                                .unwrap_or(0.0);
+                    let file = std::fs::File::open(&path).unwrap();
+                    let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
 
-                            sink.stop();
-                            sink = Arc::new(Sink::try_new(&handle).unwrap());
-                            sink.append(source);
+                    *_prog.lock().unwrap() = 0.0;
+                    *_dura.lock().unwrap() = source
+                        .total_duration()
+                        .map(|d| d.as_secs_f32())
+                        .unwrap_or(0.0);
+                    let mut _sink = sink_clone.lock().unwrap();
+                    _sink.stop();
+                    *_sink = Sink::try_new(&handle).unwrap();
+                    _sink.append(source);
+                    _sink.play();
 
-                            sink.play();
-
-                            // 启动进度上报线程
-                            let sink_ref = sink.clone();
-                            let tx_clone = progress_tx.clone();
-                            let progress = progress.clone();
-                            thread::spawn(move || {
-                                let dura = 1000.;
-                                loop {
-                                    if sink_ref.empty() {
-                                        println!("Play end!");
-                                        break;
-                                    }
-                                    {
-                                        let mut _progress = progress.lock().unwrap();
-                                        if !sink_ref.is_paused() {
-                                            *_progress += dura / 1000.0;
-                                        }
-                                        let _ = tx_clone.send(PlayerState {
-                                            progress: _progress.min(duration),
-                                            duration: duration,
-                                            progress_info_str: format!(
-                                                "{} / {}",
-                                                make_time_str(_progress.min(duration)),
-                                                make_time_str(duration)
-                                            ),
-                                        });
-                                    }
-                                    thread::sleep(Duration::from_millis(dura as u64));
-                                }
-                            });
+                    // 切换到主线程更新UI
+                    let ui_weak = ui_weak.clone();
+                    let _dura = _dura.clone();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_duration(_dura.lock().unwrap().clone());
+                            ui.set_progress(0.0);
+                            ui.set_progress_info_str("00:00".into());
+                            ui.set_paused(false);
                         }
-                    }
+                    })
+                    .unwrap();
                 }
                 PlayerCommand::Pause => {
-                    if sink.is_paused() {
-                        sink.play();
+                    let _sink = sink_clone.lock().unwrap();
+                    if _sink.is_paused() {
+                        _sink.play();
                     } else {
-                        sink.pause();
+                        _sink.pause();
                     }
                 }
                 PlayerCommand::ChangeProgress(new_progress) => {
-                    match sink.try_seek(Duration::from_secs_f32(new_progress)) {
+                    let _sink = sink_clone.lock().unwrap();
+                    match _sink.try_seek(Duration::from_secs_f32(new_progress)) {
                         Ok(_) => {
-                            let mut prog = progress.lock().unwrap();
-                            *prog = new_progress;
+                            *_prog.lock().unwrap() = new_progress;
                         }
                         Err(e) => {
                             eprintln!("Failed to seek: {}", e);
@@ -158,21 +153,32 @@ fn main() {
 
     // UI 定时刷新进度条
     let ui_weak = ui.as_weak();
+    let _prog = progress.clone();
+    let _dura = duration.clone();
     let timer = slint::Timer::default();
+    let sink_clone = sink.clone();
     timer.start(
         slint::TimerMode::Repeated,
-        Duration::from_millis(100),
+        Duration::from_millis(200),
         move || {
-            if let Ok(state) = progress_rx.try_recv() {
-                if let Some(ui) = ui_weak.upgrade() {
-                    ui.set_progress(state.progress);
-                    ui.set_duration(state.duration);
-                    ui.set_progress_info_str(state.progress_info_str.clone().into());
+            let _sink = sink_clone.lock().unwrap();
+            if let Some(ui) = ui_weak.upgrade() {
+                // 如果不在拖动进度条，则更新进度条
+                if !ui.get_dragging() {
+                    ui.set_progress(_sink.get_pos().as_secs_f32());
                 }
+                ui.set_duration(_dura.lock().unwrap().clone());
+                ui.set_progress_info_str(
+                    format!(
+                        "{:02}/{:02}",
+                        make_time_str(_sink.get_pos().as_secs_f32()),
+                        make_time_str(_dura.lock().unwrap().clone())
+                    )
+                    .into(),
+                );
             }
         },
     );
-    let song_list = read_song_list();
-    ui.set_song_list(song_list.as_slice().into());
+
     ui.run().unwrap();
 }

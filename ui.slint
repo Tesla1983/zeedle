@@ -4,10 +4,11 @@ export struct SongInfo {
     song_name:string,
     singer:string,
     duration:string,
+    song_path:string,
 }
 
 export component PlayPauseButton inherits Window {
-    in-out property <bool> status;
+    in-out property <bool> paused:true;
     in-out property <int> w:100;
     in-out property <int> h:100;
     callback toggled();
@@ -15,10 +16,10 @@ export component PlayPauseButton inherits Window {
     height: h * 1px;
     area := TouchArea {
         clicked => {
-            status = !status;
+            paused = !paused;
             toggled();
         }
-        if !root.status:
+        if !root.paused:
             Path {
             width: 100%;
             height: 100%;
@@ -69,7 +70,7 @@ export component PlayPauseButton inherits Window {
             stroke: gray;
             stroke-width: root.w * 0.1px;
         }
-        if root.status:
+        if root.paused:
             Path {
             width: 100%;
             height: 100%;
@@ -100,8 +101,12 @@ export component SongItem inherits Window {
     height: 30px;
     in property <SongInfo> info;
     callback double_clicked();
+    background: area.has-hover ? darkgray : transparent;
     VerticalLayout {
-        TouchArea {
+        area := TouchArea {
+            double-clicked => {
+                double_clicked()
+            }
             HorizontalLayout {
                 alignment: space-between;
                 Rectangle {
@@ -124,10 +129,6 @@ export component SongItem inherits Window {
                         text: info.duration;
                     }
                 }
-            }
-
-            double-clicked => {
-                double_clicked()
             }
         }
 
@@ -161,7 +162,9 @@ export component MainWindow inherits Window {
     // 当前播放进度文本
     in-out property <string> progress_info_str;
     // 播放/暂停状态
-    in-out property <bool> paused;
+    in-out property <bool> paused:true;
+    // 是否正在拖动进度条
+    in-out property <bool> dragging;
     // 歌曲列表
     in-out property <[SongInfo]> song_list;
     callback play(path: string);
@@ -174,7 +177,7 @@ export component MainWindow inherits Window {
             for item in root.song_list: SongItem {
                 info: item;
                 double_clicked => {
-                    root.play(item.song-name);
+                    root.play(item.song-path);
                 }
             }
         }
@@ -185,7 +188,11 @@ export component MainWindow inherits Window {
             //未知原因：单向绑定无法刷新UI, 只能双向绑定
             value <=> root.progress;
             released(v) => {
+                root.dragging = false;
                 change_progress(v);
+            }
+            changed(value) => {
+                root.dragging = true;
             }
         }
 
@@ -194,7 +201,7 @@ export component MainWindow inherits Window {
             PlayPauseButton {
                 w: 30;
                 h: 30;
-                status <=> root.paused;
+                paused <=> root.paused;
                 toggled => {
                     root.toggle_play()
                 }
