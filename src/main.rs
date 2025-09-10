@@ -107,7 +107,6 @@ fn main() {
                     let mut _sink = sink_clone.lock().unwrap();
                     _sink.stop();
                     _sink.clear();
-                    *_sink = Sink::try_new(&handle).unwrap();
                     _sink.append(source);
                     _sink.play();
 
