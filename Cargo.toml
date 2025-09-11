@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 audiotags = "0.5.0"
 glob = "0.3.3"
+rand = "0.9.2"
 rodio = "0.20.1"
 slint = "1.13.0"
 

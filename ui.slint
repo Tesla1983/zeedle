@@ -1,10 +1,106 @@
 import { VerticalBox, Button, Slider, HorizontalBox, GridBox, StandardTableView, ListView } from "std-widgets.slint";
 
 export struct SongInfo {
+    id:int,
     song_name:string,
     singer:string,
     duration:string,
     song_path:string,
+}
+
+// play mode: in order / random
+export enum PlayMode {
+    InOrder,
+    Random,
+}
+
+
+export component NextSongButton inherits Window {
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback clicked();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => clicked();
+        Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: h * 0.5;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: w * 0.8;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.8;
+                y: h;
+            }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
+}
+
+export component PrevSongButton inherits Window {
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback clicked();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => clicked();
+        Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: w * 0.8;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.8;
+                y: h;
+            }
+
+            LineTo {
+                x: 0.1 * w;
+                y: h * 0.5;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
 }
 
 export component PlayPauseButton inherits Window {
@@ -97,6 +193,138 @@ export component PlayPauseButton inherits Window {
     }
 }
 
+export component InOrderButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.2;
+            }
+
+            MoveTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.8;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
+
+export component RandomButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.7 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.9 * h;
+            }
+
+            // 第二段
+            MoveTo {
+                x: 0;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.3 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.1 * h;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
+
 export component TitleBar inherits Window {
     height: 30px;
     VerticalLayout {
@@ -105,6 +333,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "歌曲";
                     color: dimgray;
                 }
@@ -113,6 +342,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "歌手";
                     color: dimgray;
                 }
@@ -121,6 +351,7 @@ export component TitleBar inherits Window {
             Rectangle {
                 width: 33%;
                 Text {
+                    x: parent.width * 0.4;
                     text: "时间";
                     color: dimgray;
                 }
@@ -161,6 +392,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.song-name;
                     }
                 }
@@ -168,6 +400,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.singer;
                     }
                 }
@@ -175,6 +408,7 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        x: parent.width * 0.4;
                         text: info.duration;
                     }
                 }
@@ -183,7 +417,7 @@ export component SongItem inherits Window {
 
         Path {
             width: 100%;
-            height: 5px;
+            height: 1px;
             MoveTo {
                 x: 0;
                 y: 0;
@@ -195,7 +429,7 @@ export component SongItem inherits Window {
             }
 
             stroke: white;
-            stroke-width: 0.1px;
+            stroke-width: 0.15px;
         }
     }
 }
@@ -205,20 +439,27 @@ export component MainWindow inherits Window {
     height: 500px;
     title: "Slint Rodio Player";
     // 当前播放进度 (秒)
-    in-out property <float> progress; 
+    in-out property <float> progress:0.0; 
     // 总时长 (秒)
-    in-out property <float> duration; 
+    in-out property <float> duration:1.0; 
     // 当前播放进度文本
-    in-out property <string> progress_info_str;
+    in-out property <string> progress_info_str:"00:00/00:00";
     // 播放/暂停状态
     in-out property <bool> paused:true;
     // 是否正在拖动进度条
-    in-out property <bool> dragging;
+    in-out property <bool> dragging:false;
     // 歌曲列表
     in-out property <[SongInfo]> song_list;
-    callback play(path: string);
+    // 当前播放歌曲的信息
+    in-out property <SongInfo> current_song;
+    // 播放模式
+    in-out property <PlayMode> play_mode;
     callback toggle_play();
-    callback change_progress(sec: float);
+    callback play(SongInfo);
+    callback play_next();
+    callback play_prev();
+    callback change_progress(float);
+    callback switch_mode(PlayMode);
     VerticalLayout {
         TitleBar { }
 
@@ -228,7 +469,7 @@ export component MainWindow inherits Window {
             for item in root.song_list: SongItem {
                 info: item;
                 double_clicked => {
-                    root.play(item.song-path);
+                    root.play(item);
                 }
             }
         }
@@ -236,7 +477,7 @@ export component MainWindow inherits Window {
         Slider {
             minimum: 0;
             maximum: root.duration;
-            //未知原因：单向绑定无法刷新UI, 只能双向绑定
+            //未知原因: 单向绑定无法刷新UI, 只能双向绑定
             value <=> root.progress;
             released(v) => {
                 root.dragging = false;
@@ -249,20 +490,96 @@ export component MainWindow inherits Window {
 
         HorizontalLayout {
             alignment: center;
-            PlayPauseButton {
-                w: 30;
-                h: 30;
-                paused <=> root.paused;
-                toggled => {
-                    root.toggle_play()
+            Rectangle {
+                width: 30%;
+                Text {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    text: current_song.song_name + " - " + current_song.singer;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    wrap: TextWrap.word-wrap;
                 }
             }
-        }
 
-        Text {
-            text: root.progress_info_str;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+            Rectangle {
+                width: 6%;
+                inorder_btn := InOrderButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    selected: root.play_mode == PlayMode.InOrder;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        switch_mode(PlayMode.InOrder);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                PrevSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        root.play_prev();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                PlayPauseButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    paused <=> root.paused;
+                    toggled => {
+                        root.toggle_play()
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                NextSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        root.play_next();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                border-color: transparent;
+                RandomButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    selected: root.play_mode == PlayMode.Random;
+                    w: 20;
+                    h: 20;
+                    clicked => {
+                        switch_mode(PlayMode.Random);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 30%;
+                Text {
+                    x: parent.width / 2 - self.width / 2;
+                    text: root.progress_info_str;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
         }
     }
 }
