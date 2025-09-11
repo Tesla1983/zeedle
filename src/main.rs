@@ -1,5 +1,5 @@
 use rand::Rng;
-use rodio::{Decoder, OutputStream, Sink, Source};
+use rodio::{Decoder, Source};
 use slint::ToSharedString;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
@@ -61,8 +61,9 @@ fn main() {
     let ui = MainWindow::new().unwrap();
 
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
-    let (_stream, handle) = OutputStream::try_default().unwrap();
-    let sink = Arc::new(Mutex::new(Sink::try_new(&handle).unwrap()));
+    let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
+    let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
+    let sink = Arc::new(Mutex::new(_sink));
     let progress = Arc::new(Mutex::new(0.0f32));
     let duration = Arc::new(Mutex::new(0.0f32));
     let listening = Arc::new(Mutex::new(false));
