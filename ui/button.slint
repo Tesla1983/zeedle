@@ -1,0 +1,310 @@
+
+export component NextSongButton inherits Window {
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback clicked();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => clicked();
+        Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: h * 0.5;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: w * 0.8;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.8;
+                y: h;
+            }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
+}
+
+export component PrevSongButton inherits Window {
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback clicked();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => clicked();
+        Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: w * 0.8;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.8;
+                y: h;
+            }
+
+            LineTo {
+                x: 0.1 * w;
+                y: h * 0.5;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
+}
+
+export component PlayPauseButton inherits Window {
+    in-out property <bool> paused:true;
+    in-out property <int> w:100;
+    in-out property <int> h:100;
+    callback toggled();
+    width: w * 1px;
+    height: h * 1px;
+    area := TouchArea {
+        clicked => {
+            paused = !paused;
+            toggled();
+        }
+        if !root.paused:
+            Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.30;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.30;
+                y: 0;
+            }
+
+            Close { }
+
+            MoveTo {
+                x: w * 0.50;
+                y: 0;
+            }
+
+            LineTo {
+                x: w * 0.50;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.80;
+                y: h;
+            }
+
+            LineTo {
+                x: w * 0.80;
+                y: 0;
+            }
+
+            Close { }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+        if root.paused:
+            Path {
+            width: 100%;
+            height: 100%;
+            MoveTo {
+                x: 0;
+                y: 0;
+            }
+
+            LineTo {
+                x: 0;
+                y: h;
+            }
+
+            LineTo {
+                x: 0.8 * w;
+                y: 0.5 * h;
+            }
+
+            Close { }
+
+            stroke: gray;
+            stroke-width: root.w * 0.1px;
+        }
+    }
+}
+
+export component InOrderButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.2;
+            }
+
+            MoveTo {
+                x: h;
+                y: h / 2;
+            }
+
+            LineTo {
+                x: h * 0.7;
+                y: h * 0.8;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
+
+export component RandomButton inherits Window {
+    callback clicked();
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    TouchArea {
+        clicked => {
+            root.clicked();
+        };
+        Path {
+            MoveTo {
+                x: 0;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.7 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.9 * h;
+            }
+
+            // 第二段
+            MoveTo {
+                x: 0;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.3;
+                y: 0.8 * h;
+            }
+
+            LineTo {
+                x: w * 0.7;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.3 * h;
+            }
+
+            MoveTo {
+                x: w;
+                y: 0.2 * h;
+            }
+
+            LineTo {
+                x: w * 0.9;
+                y: 0.1 * h;
+            }
+
+            stroke: selected ? cyan : gray;
+            stroke-width: 1px;
+        }
+    }
+}
