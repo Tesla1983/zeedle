@@ -1,17 +1,30 @@
 [package]
-name = "slint-rodio-player"
-version = "0.1.2"
+name = "vanilla-player"
+version = "0.1.3"
 edition = "2024"
 
 [dependencies]
 audiotags = "0.5.0"
 glob = "0.3.3"
+home = "0.5.11"
 rand = "0.9.2"
 rodio = "0.21.1"
 slint = { version = "1.13.1", features = ["renderer-skia"] }
 
 [build-dependencies]
 slint-build = { version = "1.13.1" }
+winresource = "0.1.17"
 
 [dev-dependencies]
 sysinfo = "0.37.0"
+
+[package.metadata.packager]
+product-name = "vanilla-player"
+before-packaging-command = "cargo build --release"
+resources = ["DLLs/*.dll"]
+authors = ["Jiadong He"]
+identifier = "he.jiadong.vanilla-player"
+copyright = "Copyright © 2025 Jiadong He. All rights reserved."
+
+[package.metadata.packager.nsis]
+installer-icon = "ui/cover.ico"

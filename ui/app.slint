@@ -34,7 +34,8 @@ export global UIState {
 export component MainWindow inherits Window {
     width: 750px;
     height: 500px;
-    title: "Slint Rodio Player";
+    title: "Vanilla Player";
+    icon: @image-url("cover.svg");
     callback toggle_play();
     callback play(SongInfo);
     callback play_next();

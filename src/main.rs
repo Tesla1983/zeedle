@@ -1,3 +1,4 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use rand::Rng;
 use rodio::{Decoder, Source};
 use slint::{Model, ToSharedString};
@@ -18,32 +19,38 @@ enum PlayerCommand {
 }
 
 fn read_song_list() -> Vec<SongInfo> {
+    let audio_dir = home::home_dir().unwrap().join("Music");
+    if !audio_dir.exists() {
+        return Vec::new();
+    }
     let mut list = Vec::new();
-    for (index, entry) in glob::glob("./audios/*.mp3")
+    for (index, entry) in glob::glob(audio_dir.join("*.flac").to_str().unwrap())
         .unwrap()
-        .chain(glob::glob("./audios/*.flac").unwrap())
+        .chain(glob::glob(audio_dir.join("*.mp3").to_str().unwrap()).unwrap())
+        .chain(glob::glob(audio_dir.join("*.wav").to_str().unwrap()).unwrap())
         .enumerate()
     {
         if let Ok(path) = entry {
-            let tag = audiotags::Tag::new().read_from_path(&path).unwrap();
-            let file = std::fs::File::open(&path).unwrap();
-            let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
-            let dura = source
-                .total_duration()
-                .map(|d| d.as_secs_f32())
-                .unwrap_or(0.0);
+            if let Ok(tag) = audiotags::Tag::new().read_from_path(&path) {
+                let file = std::fs::File::open(&path).unwrap();
+                let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
+                let dura = source
+                    .total_duration()
+                    .map(|d| d.as_secs_f32())
+                    .unwrap_or(0.0);
 
-            list.push(SongInfo {
-                id: index as i32,
-                song_name: tag
-                    .title()
-                    .unwrap_or(path.file_stem().map(|x| x.to_str()).unwrap().unwrap())
-                    .to_shared_string(),
-                singer: tag.artist().unwrap_or("unknown").to_shared_string(),
-                duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
-                    .to_shared_string(),
-                song_path: path.display().to_shared_string(),
-            });
+                list.push(SongInfo {
+                    id: index as i32,
+                    song_name: tag
+                        .title()
+                        .unwrap_or(path.file_stem().map(|x| x.to_str()).unwrap().unwrap())
+                        .to_shared_string(),
+                    singer: tag.artist().unwrap_or("unknown").to_shared_string(),
+                    duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
+                        .to_shared_string(),
+                    song_path: path.display().to_shared_string(),
+                });
+            }
         }
     }
 
