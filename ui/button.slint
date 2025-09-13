@@ -96,7 +96,6 @@ export component PlayPauseButton inherits Window {
     height: h * 1px;
     area := TouchArea {
         clicked => {
-            paused = !paused;
             toggled();
         }
         if !root.paused:
