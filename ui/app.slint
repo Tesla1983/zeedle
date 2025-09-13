@@ -10,32 +10,31 @@ export enum PlayMode {
 }
 
 // ui state
-export struct UIState {
+export global UIState {
     // 当前播放进度 (秒)
-    progress: float,
+    in-out property <float> progress;
     // 总时长 (秒)
-    duration: float,
+    in-out property <float> duration;
     // 当前播放进度文本
-    progress_info_str: string,
+    in-out property <string> progress_info_str;
     // 播放/暂停状态
-    paused: bool,
+    in-out property <bool> paused;
     // 是否正在拖动进度条
-    dragging: bool,
+    in-out property <bool> dragging;
     // 歌曲列表
-    song_list: [SongInfo],
+    in-out property <[SongInfo]> song_list;
     // 当前播放歌曲的信息
-    current_song: SongInfo,
+    in-out property <SongInfo> current_song;
     // 播放模式
-    play_mode: PlayMode,
+    in-out property <PlayMode> play_mode;
     // 是否已被用户触发播放
-    user_listening: bool,
+    in-out property <bool> user_listening;
 }
 
 export component MainWindow inherits Window {
     width: 750px;
     height: 500px;
     title: "Slint Rodio Player";
-    in-out property <UIState> ui_state;
     callback toggle_play();
     callback play(SongInfo);
     callback play_next();
@@ -48,7 +47,7 @@ export component MainWindow inherits Window {
         ListView {
             height: 80%;
             width: 100%;
-            for item in ui_state.song_list: SongItem {
+            for item in UIState.song_list: SongItem {
                 info: item;
                 double_clicked => {
                     play(item);
@@ -58,15 +57,15 @@ export component MainWindow inherits Window {
 
         progress-bar := Slider {
             minimum: 0;
-            maximum: ui_state.duration;
-            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新
-            value: ui_state.progress;
+            maximum: UIState.duration;
+            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+            value <=> UIState.progress;
             released(v) => {
-                ui_state.dragging = false;
+                UIState.dragging = false;
                 change_progress(v);
             }
             changed(_) => {
-                ui_state.dragging = true;
+                UIState.dragging = true;
             }
         }
 
@@ -77,7 +76,7 @@ export component MainWindow inherits Window {
                 Text {
                     x: parent.width / 2 - self.width / 2;
                     y: parent.height / 2 - self.height / 2;
-                    text: ui_state.current_song.song_name + " - " + ui_state.current_song.singer;
+                    text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
                     vertical-alignment: center;
                     horizontal-alignment: center;
                     wrap: TextWrap.word-wrap;
@@ -89,7 +88,7 @@ export component MainWindow inherits Window {
                 InOrderButton {
                     x: parent.width / 2 - self.width / 2;
                     y: parent.height / 2 - self.height / 2;
-                    selected: ui_state.play_mode == PlayMode.InOrder;
+                    selected: UIState.play_mode == PlayMode.InOrder;
                     w: 20;
                     h: 20;
                     clicked => {
@@ -118,8 +117,8 @@ export component MainWindow inherits Window {
                     y: parent.height / 2 - self.height / 2;
                     w: 20;
                     h: 20;
-                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新
-                    paused: ui_state.paused;
+                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+                    paused <=> UIState.paused;
                     toggled => {
                         root.toggle_play();
                     }
@@ -145,7 +144,7 @@ export component MainWindow inherits Window {
                 RandomButton {
                     x: parent.width / 2 - self.width / 2;
                     y: parent.height / 2 - self.height / 2;
-                    selected: ui_state.play_mode == PlayMode.Random;
+                    selected: UIState.play_mode == PlayMode.Random;
                     w: 20;
                     h: 20;
                     clicked => {
@@ -158,23 +157,11 @@ export component MainWindow inherits Window {
                 width: 30%;
                 Text {
                     x: parent.width / 2 - self.width / 2;
-                    text: ui_state.progress_info_str;
+                    text: UIState.progress_info_str;
                     vertical-alignment: center;
                     horizontal-alignment: center;
                 }
             }
-        }
-    }
-
-    // 临时通过定时器刷新`失效`的单向绑定状态
-    Timer {
-        interval: 100ms;
-        running: true;
-        triggered => {
-            if !ui_state.dragging {
-                progress-bar.value = ui_state.progress;
-            }
-            play-btn.paused = ui_state.paused;
         }
     }
 }

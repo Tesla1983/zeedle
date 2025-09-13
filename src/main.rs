@@ -17,68 +17,6 @@ enum PlayerCommand {
     SwitchMode(PlayMode), // 切换播放模式
 }
 
-trait Builder {
-    fn progress(self, new_progress: f32) -> Self;
-    fn duration(self, new_duration: f32) -> Self;
-    fn paused(self, is_paused: bool) -> Self;
-    fn dragging(self, is_dragging: bool) -> Self;
-    fn song_list(self, list: Vec<SongInfo>) -> Self;
-    fn current_song(self, song: SongInfo) -> Self;
-    fn play_mode(self, mode: PlayMode) -> Self;
-    fn user_listening(self, listening: bool) -> Self;
-}
-
-impl Builder for UIState {
-    fn progress(mut self, new_progress: f32) -> Self {
-        self.progress = new_progress;
-        self.progress_info_str = format!(
-            "{:02}:{:02} / {:02}:{:02}",
-            self.progress as i32 / 60,
-            self.progress as i32 % 60,
-            self.duration as i32 / 60,
-            self.duration as i32 % 60
-        )
-        .to_shared_string();
-        self
-    }
-    fn duration(mut self, new_duration: f32) -> Self {
-        self.duration = new_duration;
-        self.progress_info_str = format!(
-            "{:02}:{:02} / {:02}:{:02}",
-            self.progress as i32 / 60,
-            self.progress as i32 % 60,
-            self.duration as i32 / 60,
-            self.duration as i32 % 60
-        )
-        .to_shared_string();
-        self
-    }
-    fn paused(mut self, is_paused: bool) -> Self {
-        self.paused = is_paused;
-        self
-    }
-    fn dragging(mut self, is_dragging: bool) -> Self {
-        self.dragging = is_dragging;
-        self
-    }
-    fn song_list(mut self, list: Vec<SongInfo>) -> Self {
-        self.song_list = list.as_slice().into();
-        self
-    }
-    fn current_song(mut self, song: SongInfo) -> Self {
-        self.current_song = song;
-        self
-    }
-    fn play_mode(mut self, mode: PlayMode) -> Self {
-        self.play_mode = mode;
-        self
-    }
-    fn user_listening(mut self, listening: bool) -> Self {
-        self.user_listening = listening;
-        self
-    }
-}
-
 fn read_song_list() -> Vec<SongInfo> {
     let mut list = Vec::new();
     for (index, entry) in glob::glob("./audios/*.mp3")
@@ -119,14 +57,12 @@ fn main() {
     stream_handle.log_on_drop(false);
     let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
     let sink = Arc::new(Mutex::new(_sink));
-    let init_ui_state = ui
-        .get_ui_state()
-        .progress(0.0)
-        .duration(0.0)
-        .paused(true)
-        .play_mode(PlayMode::InOrder)
-        .dragging(false);
-    ui.set_ui_state(init_ui_state);
+    let ui_state = ui.global::<UIState>();
+    ui_state.set_progress(0.0);
+    ui_state.set_duration(0.0);
+    ui_state.set_paused(true);
+    ui_state.set_play_mode(PlayMode::InOrder);
+    ui_state.set_dragging(false);
 
     // 播放线程
     let ui_weak = ui.as_weak();
@@ -136,7 +72,8 @@ fn main() {
         let ui_weak_clone = ui_weak.clone();
         slint::invoke_from_event_loop(move || {
             if let Some(ui) = ui_weak_clone.upgrade() {
-                ui.set_ui_state(ui.get_ui_state().song_list(read_song_list()));
+                let ui_state = ui.global::<UIState>();
+                ui_state.set_song_list(read_song_list().as_slice().into());
             }
         })
         .unwrap();
@@ -158,14 +95,12 @@ fn main() {
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
-                            let new_ui_state = ui
-                                .get_ui_state()
-                                .current_song(song_info)
-                                .paused(false)
-                                .progress(0.)
-                                .duration(dura)
-                                .user_listening(true);
-                            ui.set_ui_state(new_ui_state);
+                            let ui_state = ui.global::<UIState>();
+                            ui_state.set_current_song(song_info);
+                            ui_state.set_paused(false);
+                            ui_state.set_progress(0.0);
+                            ui_state.set_duration(dura);
+                            ui_state.set_user_listening(true);
                         }
                     })
                     .unwrap();
@@ -177,11 +112,11 @@ fn main() {
                         // 如果当前没有播放任何歌曲，则播放第一首
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
-                                let ui_state = ui.get_ui_state();
+                                let ui_state = ui.global::<UIState>();
                                 ui.invoke_play(
-                                    ui_state.song_list.iter().collect::<Vec<_>>()[0].clone(),
+                                    ui_state.get_song_list().iter().collect::<Vec<_>>()[0].clone(),
                                 );
-                                ui.set_ui_state(ui_state.paused(false));
+                                ui_state.set_paused(false);
                             }
                         })
                         .unwrap();
@@ -194,8 +129,8 @@ fn main() {
                         }
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
-                                let ui_state = ui.get_ui_state();
-                                ui.set_ui_state(ui_state.paused(!paused));
+                                let ui_state = ui.global::<UIState>();
+                                ui_state.set_paused(!paused);
                             }
                         })
                         .unwrap();
@@ -208,8 +143,8 @@ fn main() {
                             let ui_weak = ui_weak.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_weak.upgrade() {
-                                    let new_ui_state = ui.get_ui_state().progress(new_progress);
-                                    ui.set_ui_state(new_ui_state);
+                                    let ui_state = ui.global::<UIState>();
+                                    ui_state.set_progress(new_progress);
                                 }
                             })
                             .unwrap();
@@ -223,13 +158,13 @@ fn main() {
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
-                            let ui_state = ui.get_ui_state();
-                            let song_list: Vec<_> = ui_state.song_list.iter().collect();
+                            let ui_state = ui.global::<UIState>();
+                            let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
                             let mut rng = rand::rng();
                             let next_id1 = rng.random_range(..song_list.len());
-                            let id = ui_state.current_song.id as usize;
+                            let id = ui_state.get_current_song().id as usize;
                             let next_id2 = if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                            let next_id = match ui_state.play_mode {
+                            let next_id = match ui_state.get_play_mode() {
                                 PlayMode::InOrder => next_id2,
                                 PlayMode::Random => next_id1,
                             };
@@ -245,13 +180,13 @@ fn main() {
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
-                            let ui_state = ui.get_ui_state();
-                            let song_list: Vec<_> = ui_state.song_list.iter().collect();
+                            let ui_state = ui.global::<UIState>();
+                            let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
                             let mut rng = rand::rng();
                             let next_id1 = rng.random_range(..song_list.len());
-                            let id = ui_state.current_song.id as usize;
+                            let id = ui_state.get_current_song().id as usize;
                             let next_id2 = if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                            let next_id = match ui_state.play_mode {
+                            let next_id = match ui_state.get_play_mode() {
                                 PlayMode::InOrder => next_id2,
                                 PlayMode::Random => next_id1,
                             };
@@ -267,8 +202,8 @@ fn main() {
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
-                            let new_ui_state = ui.get_ui_state().play_mode(m);
-                            ui.set_ui_state(new_ui_state);
+                            let ui_state = ui.global::<UIState>();
+                            ui_state.set_play_mode(m);
                         }
                     })
                     .unwrap();
@@ -327,15 +262,22 @@ fn main() {
             let sink_guard = sink_clone.lock().unwrap();
             if let Some(ui) = ui_weak.upgrade() {
                 // 如果不在拖动进度条，则自增进度条
-                let ui_state = ui.get_ui_state();
-                if !ui_state.dragging {
-                    ui.set_ui_state(
-                        ui.get_ui_state()
-                            .progress(sink_guard.get_pos().as_secs_f32()),
-                    );
+                let ui_state = ui.global::<UIState>();
+                if !ui_state.get_dragging() {
+                    ui_state.set_progress(sink_guard.get_pos().as_secs_f32());
                 }
+                ui_state.set_progress_info_str(
+                    format!(
+                        "{:02}:{:02} / {:02}:{:02}",
+                        (ui_state.get_progress() as u32) / 60,
+                        (ui_state.get_progress() as u32) % 60,
+                        (ui_state.get_duration() as u32) / 60,
+                        (ui_state.get_duration() as u32) % 60
+                    )
+                    .to_shared_string(),
+                );
                 // 如果播放完毕，且之前是在播放状态，则自动播放下一首
-                if sink_guard.empty() && ui_state.user_listening && !ui_state.paused {
+                if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
                     ui.invoke_play_next();
                 }
             }
