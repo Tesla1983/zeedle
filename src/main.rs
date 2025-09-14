@@ -1,7 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::tag::{Accessor, ItemKey};
 use rand::Rng;
 use rodio::{Decoder, Source};
 use slint::{Model, ToSharedString};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
@@ -30,31 +33,75 @@ fn read_song_list() -> Vec<SongInfo> {
         .chain(glob::glob(audio_dir.join("*.wav").to_str().unwrap()).unwrap())
         .enumerate()
     {
-        if let Ok(path) = entry {
-            if let Ok(tag) = audiotags::Tag::new().read_from_path(&path) {
-                let file = std::fs::File::open(&path).unwrap();
-                let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
-                let dura = source
-                    .total_duration()
-                    .map(|d| d.as_secs_f32())
-                    .unwrap_or(0.0);
-
-                list.push(SongInfo {
-                    id: index as i32,
-                    song_name: tag
-                        .title()
-                        .unwrap_or(path.file_stem().map(|x| x.to_str()).unwrap().unwrap())
-                        .to_shared_string(),
-                    singer: tag.artist().unwrap_or("unknown").to_shared_string(),
-                    duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
-                        .to_shared_string(),
-                    song_path: path.display().to_shared_string(),
-                });
+        if let Ok(p) = entry {
+            if let Ok(tagged) = lofty::read_from_path(&p) {
+                let dura = tagged.properties().duration().as_secs_f32();
+                if let Some(tag) = tagged.primary_tag() {
+                    let item = SongInfo {
+                        id: index as i32,
+                        song_path: p.display().to_shared_string(),
+                        song_name: tag
+                            .title()
+                            .as_deref()
+                            .unwrap_or(
+                                p.file_stem()
+                                    .map(|x| x.to_str())
+                                    .flatten()
+                                    .unwrap_or("unknown"),
+                            )
+                            .to_shared_string(),
+                        singer: tag
+                            .artist()
+                            .as_deref()
+                            .unwrap_or("unknown")
+                            .to_shared_string(),
+                        duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
+                            .to_shared_string(),
+                    };
+                    list.push(item);
+                }
             }
         }
     }
 
     list
+}
+
+fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
+    if let Ok(tagged) = lofty::read_from_path(&p) {
+        if let Some(tag) = tagged.primary_tag() {
+            let mut lyrics = tag
+                .get(&ItemKey::Lyrics)
+                .unwrap()
+                .value()
+                .text()
+                .unwrap()
+                .split("\n")
+                .map(|line| {
+                    let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
+                    let time_str = time_str.trim_start_matches('[');
+                    let dura = time_str
+                        .split(':')
+                        .map(|x| x.parse::<f32>().unwrap_or(0.))
+                        .rev()
+                        .reduce(|acc, x| acc + x * 60.)
+                        .unwrap_or(0.);
+                    LyricItem {
+                        time: dura,
+                        text: text.to_shared_string(),
+                        duration: 0.0,
+                    }
+                })
+                .filter(|ins| ins.time > 0. && !ins.text.is_empty())
+                .collect::<Vec<_>>();
+            for i in 0..lyrics.len() - 1 {
+                lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
+            }
+            lyrics.last_mut().map(|ins| ins.duration = 100.0);
+            return lyrics;
+        }
+    }
+    return Vec::new();
 }
 
 fn main() {
@@ -103,11 +150,16 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-                            ui_state.set_current_song(song_info);
+                            ui_state.set_current_song(song_info.clone());
                             ui_state.set_paused(false);
                             ui_state.set_progress(0.0);
                             ui_state.set_duration(dura);
                             ui_state.set_user_listening(true);
+                            ui_state.set_lyrics(
+                                read_lyrics(song_info.song_path.to_string().into())
+                                    .as_slice()
+                                    .into(),
+                            );
                         }
                     })
                     .unwrap();
@@ -283,6 +335,20 @@ fn main() {
                     )
                     .to_shared_string(),
                 );
+                if !ui_state.get_paused() {
+                    for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
+                        if (item.time - ui_state.get_progress()).abs() < 0.10 {
+                            if idx <= 5 {
+                                ui_state.set_lyric_viewport_y(0.)
+                            } else {
+                                ui_state.set_lyric_viewport_y(
+                                    (5 as f32 - idx as f32) * ui_state.get_lyric_line_height(),
+                                );
+                            }
+                            break;
+                        }
+                    }
+                }
                 // 如果播放完毕，且之前是在播放状态，则自动播放下一首
                 if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
                     ui.invoke_play_next();
