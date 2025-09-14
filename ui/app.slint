@@ -1,16 +1,18 @@
 import { ListView, Slider, TabWidget, StandardListView } from "std-widgets.slint";
 import { NextSongButton, PrevSongButton, PlayPauseButton, InOrderButton, RandomButton } from "button.slint";
 import { SongInfo, TitleBar, SongItem } from "song.slint";
+import { LyricLine } from "lyric.slint";
 
-
-// play mode: in order / random
+// play mode
 export enum PlayMode {
     InOrder,
     Random,
 }
 
+// lyric item
 export struct LyricItem {
     time: float,
+    duration: float,
     text: string,
 } 
 
@@ -36,6 +38,10 @@ export global UIState {
     in-out property <bool> user_listening;
     // 当前播放歌曲的歌词
     in-out property <[LyricItem]> lyrics;
+    // 当前歌词视窗的滚动条位置（一般为负数）
+    in property <length> lyric_viewport_y;
+    // 当前一行歌词的高度
+    in-out property <length> lyric_line_height: 30px;
 }
 
 export component MainWindow inherits Window {
@@ -180,15 +186,14 @@ export component MainWindow inherits Window {
         Tab {
             title: "歌词";
             VerticalLayout {
-                ListView {
+                lyric-win := ListView {
                     height: 100%;
                     width: 100%;
-                    for item in UIState.lyrics: Text {
-                        height: 8%;
-                        text: item.text;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        font-size: 14px;
+                    mouse-drag-pan-enabled: false;
+                    viewport-y <=> UIState.lyric_viewport_y;
+                    for item in UIState.lyrics: LyricLine {
+                        content: item.text;
+                        playing: (UIState.progress >= item.time) && (UIState.progress < item.time + item.duration);
                     }
                 }
             }

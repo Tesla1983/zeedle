@@ -1,0 +1,15 @@
+export component LyricLine inherits Window {
+    height: 30px;
+    width: 100%;
+    in-out property <string> content;
+    in-out property <bool> playing;
+    callback triggered();
+    Text {
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        color: playing ? cyan : white;
+        text: content;
+        font-size: playing ? 15px : 13px;
+        font-weight: playing ? 800 : 0;
+    }
+}

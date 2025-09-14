@@ -70,7 +70,7 @@ fn read_song_list() -> Vec<SongInfo> {
 fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
     if let Ok(tagged) = lofty::read_from_path(&p) {
         if let Some(tag) = tagged.primary_tag() {
-            let lyrics = tag
+            let mut lyrics = tag
                 .get(&ItemKey::Lyrics)
                 .unwrap()
                 .value()
@@ -89,10 +89,15 @@ fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
                     LyricItem {
                         time: dura,
                         text: text.to_shared_string(),
+                        duration: 0.0,
                     }
                 })
                 .filter(|ins| ins.time > 0. && !ins.text.is_empty())
                 .collect::<Vec<_>>();
+            for i in 0..lyrics.len() - 1 {
+                lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
+            }
+            lyrics.last_mut().map(|ins| ins.duration = 100.0);
             return lyrics;
         }
     }
@@ -330,6 +335,20 @@ fn main() {
                     )
                     .to_shared_string(),
                 );
+                if !ui_state.get_paused() {
+                    for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
+                        if (item.time - ui_state.get_progress()).abs() < 0.10 {
+                            if idx <= 5 {
+                                ui_state.set_lyric_viewport_y(0.)
+                            } else {
+                                ui_state.set_lyric_viewport_y(
+                                    (5 as f32 - idx as f32) * ui_state.get_lyric_line_height(),
+                                );
+                            }
+                            break;
+                        }
+                    }
+                }
                 // 如果播放完毕，且之前是在播放状态，则自动播放下一首
                 if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
                     ui.invoke_play_next();
