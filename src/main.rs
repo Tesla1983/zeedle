@@ -1,4 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::tag::Accessor;
 use rand::Rng;
 use rodio::{Decoder, Source};
 use slint::{Model, ToSharedString};
@@ -30,26 +32,33 @@ fn read_song_list() -> Vec<SongInfo> {
         .chain(glob::glob(audio_dir.join("*.wav").to_str().unwrap()).unwrap())
         .enumerate()
     {
-        if let Ok(path) = entry {
-            if let Ok(tag) = audiotags::Tag::new().read_from_path(&path) {
-                let file = std::fs::File::open(&path).unwrap();
-                let source = Decoder::new(std::io::BufReader::new(file)).unwrap();
-                let dura = source
-                    .total_duration()
-                    .map(|d| d.as_secs_f32())
-                    .unwrap_or(0.0);
-
-                list.push(SongInfo {
-                    id: index as i32,
-                    song_name: tag
-                        .title()
-                        .unwrap_or(path.file_stem().map(|x| x.to_str()).unwrap().unwrap())
-                        .to_shared_string(),
-                    singer: tag.artist().unwrap_or("unknown").to_shared_string(),
-                    duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
-                        .to_shared_string(),
-                    song_path: path.display().to_shared_string(),
-                });
+        if let Ok(p) = entry {
+            if let Ok(tagged) = lofty::read_from_path(&p) {
+                let dura = tagged.properties().duration().as_secs_f32();
+                if let Some(tag) = tagged.primary_tag() {
+                    let item = SongInfo {
+                        id: index as i32,
+                        song_path: p.display().to_shared_string(),
+                        song_name: tag
+                            .title()
+                            .as_deref()
+                            .unwrap_or(
+                                p.file_stem()
+                                    .map(|x| x.to_str())
+                                    .flatten()
+                                    .unwrap_or("unknown"),
+                            )
+                            .to_shared_string(),
+                        singer: tag
+                            .artist()
+                            .as_deref()
+                            .unwrap_or("unknown")
+                            .to_shared_string(),
+                        duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
+                            .to_shared_string(),
+                    };
+                    list.push(item);
+                }
             }
         }
     }
