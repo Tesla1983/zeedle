@@ -70,35 +70,35 @@ fn read_song_list() -> Vec<SongInfo> {
 fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
     if let Ok(tagged) = lofty::read_from_path(&p) {
         if let Some(tag) = tagged.primary_tag() {
-            let mut lyrics = tag
-                .get(&ItemKey::Lyrics)
-                .unwrap()
-                .value()
-                .text()
-                .unwrap()
-                .split("\n")
-                .map(|line| {
-                    let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
-                    let time_str = time_str.trim_start_matches('[');
-                    let dura = time_str
-                        .split(':')
-                        .map(|x| x.parse::<f32>().unwrap_or(0.))
-                        .rev()
-                        .reduce(|acc, x| acc + x * 60.)
-                        .unwrap_or(0.);
-                    LyricItem {
-                        time: dura,
-                        text: text.to_shared_string(),
-                        duration: 0.0,
-                    }
-                })
-                .filter(|ins| ins.time > 0. && !ins.text.is_empty())
-                .collect::<Vec<_>>();
-            for i in 0..lyrics.len() - 1 {
-                lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
+            if let Some(lyric_item) = tag.get(&ItemKey::Lyrics) {
+                let mut lyrics = lyric_item
+                    .value()
+                    .text()
+                    .unwrap()
+                    .split("\n")
+                    .map(|line| {
+                        let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
+                        let time_str = time_str.trim_start_matches('[');
+                        let dura = time_str
+                            .split(':')
+                            .map(|x| x.parse::<f32>().unwrap_or(0.))
+                            .rev()
+                            .reduce(|acc, x| acc + x * 60.)
+                            .unwrap_or(0.);
+                        LyricItem {
+                            time: dura,
+                            text: text.to_shared_string(),
+                            duration: 0.0,
+                        }
+                    })
+                    .filter(|ins| ins.time > 0. && !ins.text.is_empty())
+                    .collect::<Vec<_>>();
+                for i in 0..lyrics.len() - 1 {
+                    lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
+                }
+                lyrics.last_mut().map(|ins| ins.duration = 100.0);
+                return lyrics;
             }
-            lyrics.last_mut().map(|ins| ins.duration = 100.0);
-            return lyrics;
         }
     }
     return Vec::new();
