@@ -1,4 +1,4 @@
-import { ListView, Slider } from "std-widgets.slint";
+import { ListView, Slider, TabWidget, StandardListView } from "std-widgets.slint";
 import { NextSongButton, PrevSongButton, PlayPauseButton, InOrderButton, RandomButton } from "button.slint";
 import { SongInfo, TitleBar, SongItem } from "song.slint";
 
@@ -8,6 +8,11 @@ export enum PlayMode {
     InOrder,
     Random,
 }
+
+export struct LyricItem {
+    time: float,
+    text: string,
+} 
 
 // ui state
 export global UIState {
@@ -29,6 +34,8 @@ export global UIState {
     in-out property <PlayMode> play_mode;
     // 是否已被用户触发播放
     in-out property <bool> user_listening;
+    // 当前播放歌曲的歌词
+    in-out property <[LyricItem]> lyrics;
 }
 
 export component MainWindow inherits Window {
@@ -42,125 +49,177 @@ export component MainWindow inherits Window {
     callback play_prev();
     callback change_progress(float);
     callback switch_mode(PlayMode);
-    VerticalLayout {
-        TitleBar { }
+    TabWidget {
+        Tab {
+            title: "歌曲列表";
+            VerticalLayout {
+                TitleBar { }
 
-        ListView {
-            height: 80%;
-            width: 100%;
-            for item in UIState.song_list: SongItem {
-                info: item;
-                double_clicked => {
-                    play(item);
-                }
-            }
-        }
-
-        progress-bar := Slider {
-            minimum: 0;
-            maximum: UIState.duration;
-            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
-            value <=> UIState.progress;
-            released(v) => {
-                UIState.dragging = false;
-                change_progress(v);
-            }
-            changed(_) => {
-                UIState.dragging = true;
-            }
-        }
-
-        HorizontalLayout {
-            alignment: center;
-            Rectangle {
-                width: 30%;
-                Text {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
-                    wrap: TextWrap.word-wrap;
-                }
-            }
-
-            Rectangle {
-                width: 6%;
-                InOrderButton {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    selected: UIState.play_mode == PlayMode.InOrder;
-                    w: 20;
-                    h: 20;
-                    clicked => {
-                        switch_mode(PlayMode.InOrder);
+                ListView {
+                    height: 80%;
+                    width: 100%;
+                    for item in UIState.song_list: SongItem {
+                        info: item;
+                        double_clicked => {
+                            play(item);
+                        }
                     }
                 }
-            }
 
-            Rectangle {
-                width: 6%;
-                PrevSongButton {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    w: 20;
-                    h: 20;
-                    clicked => {
-                        root.play_prev();
+                progress-bar := Slider {
+                    minimum: 0;
+                    maximum: UIState.duration;
+                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+                    value <=> UIState.progress;
+                    released(v) => {
+                        UIState.dragging = false;
+                        change_progress(v);
+                    }
+                    changed(_) => {
+                        UIState.dragging = true;
                     }
                 }
-            }
 
-            Rectangle {
-                width: 6%;
-                play-btn := PlayPauseButton {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    w: 20;
-                    h: 20;
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 30%;
+                        Text {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                            wrap: TextWrap.word-wrap;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 6%;
+                        InOrderButton {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            selected: UIState.play_mode == PlayMode.InOrder;
+                            w: 20;
+                            h: 20;
+                            clicked => {
+                                switch_mode(PlayMode.InOrder);
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 6%;
+                        PrevSongButton {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            w: 20;
+                            h: 20;
+                            clicked => {
+                                root.play_prev();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 6%;
+                        play-btn := PlayPauseButton {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            w: 20;
+                            h: 20;
                     // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
                     paused <=> UIState.paused;
-                    toggled => {
-                        root.toggle_play();
+                            toggled => {
+                                root.toggle_play();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 6%;
+                        NextSongButton {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            w: 20;
+                            h: 20;
+                            clicked => {
+                                root.play_next();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 6%;
+                        border-color: transparent;
+                        RandomButton {
+                            x: parent.width / 2 - self.width / 2;
+                            y: parent.height / 2 - self.height / 2;
+                            selected: UIState.play_mode == PlayMode.Random;
+                            w: 20;
+                            h: 20;
+                            clicked => {
+                                switch_mode(PlayMode.Random);
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 30%;
+                        Text {
+                            x: parent.width / 2 - self.width / 2;
+                            text: UIState.progress_info_str;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
                     }
                 }
             }
+        }
 
-            Rectangle {
-                width: 6%;
-                NextSongButton {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    w: 20;
-                    h: 20;
-                    clicked => {
-                        root.play_next();
+        Tab {
+            title: "歌词";
+            VerticalLayout {
+                ListView {
+                    height: 100%;
+                    width: 100%;
+                    for item in UIState.lyrics: Text {
+                        height: 8%;
+                        text: item.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        font-size: 14px;
                     }
                 }
             }
+        }
 
-            Rectangle {
-                width: 6%;
-                border-color: transparent;
-                RandomButton {
-                    x: parent.width / 2 - self.width / 2;
-                    y: parent.height / 2 - self.height / 2;
-                    selected: UIState.play_mode == PlayMode.Random;
-                    w: 20;
-                    h: 20;
-                    clicked => {
-                        switch_mode(PlayMode.Random);
-                    }
-                }
-            }
+        Tab {
+            title: "设置";
+            VerticalLayout {
+                TitleBar { }
 
-            Rectangle {
-                width: 30%;
                 Text {
-                    x: parent.width / 2 - self.width / 2;
-                    text: UIState.progress_info_str;
-                    vertical-alignment: center;
+                    width: 100%;
+                    height: 100%;
+                    text: "设置项暂未实现，敬请期待！";
                     horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Tab {
+            title: "关于";
+            VerticalLayout {
+                TitleBar { }
+
+                Text {
+                    width: 100%;
+                    height: 100%;
+                    text: "Vanilla Player\n\n一个使用 Slint 和 Rodio 实现的本地音乐播放器。\n\n作者: Jiadong He";
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
                 }
             }
         }

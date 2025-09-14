@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use lofty::file::{AudioFile, TaggedFileExt};
-use lofty::tag::Accessor;
+use lofty::tag::{Accessor, ItemKey};
 use rand::Rng;
 use rodio::{Decoder, Source};
 use slint::{Model, ToSharedString};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
@@ -66,6 +67,38 @@ fn read_song_list() -> Vec<SongInfo> {
     list
 }
 
+fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
+    if let Ok(tagged) = lofty::read_from_path(&p) {
+        if let Some(tag) = tagged.primary_tag() {
+            let lyrics = tag
+                .get(&ItemKey::Lyrics)
+                .unwrap()
+                .value()
+                .text()
+                .unwrap()
+                .split("\n")
+                .map(|line| {
+                    let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
+                    let time_str = time_str.trim_start_matches('[');
+                    let dura = time_str
+                        .split(':')
+                        .map(|x| x.parse::<f32>().unwrap_or(0.))
+                        .rev()
+                        .reduce(|acc, x| acc + x * 60.)
+                        .unwrap_or(0.);
+                    LyricItem {
+                        time: dura,
+                        text: text.to_shared_string(),
+                    }
+                })
+                .filter(|ins| ins.time > 0. && !ins.text.is_empty())
+                .collect::<Vec<_>>();
+            return lyrics;
+        }
+    }
+    return Vec::new();
+}
+
 fn main() {
     let ui = MainWindow::new().unwrap();
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
@@ -112,11 +145,16 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-                            ui_state.set_current_song(song_info);
+                            ui_state.set_current_song(song_info.clone());
                             ui_state.set_paused(false);
                             ui_state.set_progress(0.0);
                             ui_state.set_duration(dura);
                             ui_state.set_user_listening(true);
+                            ui_state.set_lyrics(
+                                read_lyrics(song_info.song_path.to_string().into())
+                                    .as_slice()
+                                    .into(),
+                            );
                         }
                     })
                     .unwrap();
