@@ -2,6 +2,8 @@
 name = "vanilla-player"
 version = "0.1.5"
 edition = "2024"
+authors = ["Jiadong He"]
+description = "A local music player built with Rodio and Slint UI"
 
 [dependencies]
 glob = "0.3.3"

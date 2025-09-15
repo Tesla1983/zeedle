@@ -205,8 +205,14 @@ fn main() {
     );
     ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
     ui_state.set_about_info(
-        format!("Vanilla Player\n\n一个使用 Slint 和 Rodio 实现的本地音乐播放器。\n\n作者: Jiadong He\n\n版本: {}", env!("CARGO_PKG_VERSION"))
-            .into(),
+        format!(
+            "{}\n\n{}\n\nauthor: {}\n\nversion: {}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_DESCRIPTION"),
+            env!("CARGO_PKG_AUTHORS"),
+            env!("CARGO_PKG_VERSION")
+        )
+        .into(),
     );
     {
         let file = std::fs::File::open(&song_info.song_path).unwrap();
