@@ -45,6 +45,8 @@ export global UIState {
     in-out property <length> lyric_line_height: 30px;
     // 歌曲文件夹配置
     in-out property <string> song_dir;
+    // 关于信息
+    in property <string> about_info;
 }
 
 export component MainWindow inherits Window {
@@ -236,7 +238,7 @@ export component MainWindow inherits Window {
             Text {
                 width: 100%;
                 height: 100%;
-                text: "Vanilla Player\n\n一个使用 Slint 和 Rodio 实现的本地音乐播放器。\n\n作者: Jiadong He";
+                text: UIState.about_info;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
