@@ -66,7 +66,20 @@ fn read_song_list() -> Vec<SongInfo> {
         }
     }
 
-    list
+    list.into_iter()
+        .map(|mut x| {
+            let singer_chars = x.singer.chars().collect::<Vec<char>>();
+            if singer_chars.len() > 10 {
+                x.singer = format!("{}...", singer_chars[..10].iter().collect::<String>()).into();
+            }
+            let song_name_chars = x.song_name.chars().collect::<Vec<char>>();
+            if song_name_chars.len() > 10 {
+                x.song_name =
+                    format!("{}...", song_name_chars[..10].iter().collect::<String>()).into();
+            }
+            return x;
+        })
+        .collect()
 }
 
 fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
