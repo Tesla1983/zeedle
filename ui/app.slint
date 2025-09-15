@@ -201,31 +201,23 @@ export component MainWindow inherits Window {
 
         Tab {
             title: "设置";
-            VerticalLayout {
-                TitleBar { }
-
-                Text {
-                    width: 100%;
-                    height: 100%;
-                    text: "设置项暂未实现，敬请期待！";
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            Text {
+                width: 100%;
+                height: 100%;
+                text: "设置项暂未实现，敬请期待！";
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
 
         Tab {
             title: "关于";
-            VerticalLayout {
-                TitleBar { }
-
-                Text {
-                    width: 100%;
-                    height: 100%;
-                    text: "Vanilla Player\n\n一个使用 Slint 和 Rodio 实现的本地音乐播放器。\n\n作者: Jiadong He";
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            Text {
+                width: 100%;
+                height: 100%;
+                text: "Vanilla Player\n\n一个使用 Slint 和 Rodio 实现的本地音乐播放器。\n\n作者: Jiadong He";
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
     }
