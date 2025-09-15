@@ -4,6 +4,7 @@ import { SongInfo, TitleBar, SongItem } from "song.slint";
 import { LyricLine } from "lyric.slint";
 
 // play mode
+@rust-attr(derive(serde::Serialize, serde::Deserialize))
 export enum PlayMode {
     InOrder,
     Random,

@@ -9,7 +9,9 @@ home = "0.5.11"
 lofty = "0.22.4"
 rand = "0.9.2"
 rodio = "0.21.1"
+serde = { version = "1.0.223", features = ["derive"] }
 slint = { version = "1.13.1", features = ["renderer-skia"] }
+toml = "0.9.5"
 
 [build-dependencies]
 slint-build = { version = "1.13.1" }

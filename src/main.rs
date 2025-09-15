@@ -8,8 +8,56 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
-
 slint::include_modules!();
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+struct Config {
+    song_dir: PathBuf,
+    current_song_id: Option<usize>,
+    progress: f32,
+    duration: f32,
+    play_mode: PlayMode,
+}
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            song_dir: home::home_dir()
+                .expect("no home directory found")
+                .join("Music"),
+            current_song_id: None,
+            progress: 0.0,
+            duration: 0.0,
+            play_mode: PlayMode::InOrder,
+        }
+    }
+}
+
+impl Config {
+    fn load() -> Self {
+        let cfg_path = get_cfg_path();
+        if cfg_path.exists() {
+            let content = std::fs::read_to_string(&cfg_path).expect("failed to read config file");
+            toml::from_str(&content).unwrap_or_default()
+        } else {
+            Self::default()
+        }
+    }
+
+    fn save(self) {
+        let cfg_path = get_cfg_path();
+        if let Some(parent) = cfg_path.parent() {
+            std::fs::create_dir_all(parent).expect("failed to create config directory");
+        }
+        let content = toml::to_string_pretty(&self).expect("failed to serialize config");
+        std::fs::write(cfg_path, content).expect("failed to write config file");
+    }
+}
+
+fn get_cfg_path() -> PathBuf {
+    home::home_dir()
+        .expect("no home directory found")
+        .join(".config/vanilla-player/config.toml")
+}
 
 // ui --> backend
 enum PlayerCommand {
@@ -21,26 +69,23 @@ enum PlayerCommand {
     SwitchMode(PlayMode), // 切换播放模式
 }
 
-fn read_song_list() -> Vec<SongInfo> {
-    let audio_dir = home::home_dir()
-        .expect("no home directory found")
-        .join("Music");
+fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
+    let audio_dir = p.clone();
     if !audio_dir.exists() {
         return Vec::new();
     }
     let mut list = Vec::new();
-    for (index, entry) in glob::glob(audio_dir.join("*.flac").to_str().unwrap())
+    for entry in glob::glob(audio_dir.join("*.flac").to_str().unwrap())
         .unwrap()
         .chain(glob::glob(audio_dir.join("*.mp3").to_str().unwrap()).unwrap())
         .chain(glob::glob(audio_dir.join("*.wav").to_str().unwrap()).unwrap())
-        .enumerate()
     {
         if let Ok(p) = entry {
             if let Ok(tagged) = lofty::read_from_path(&p) {
                 let dura = tagged.properties().duration().as_secs_f32();
                 if let Some(tag) = tagged.primary_tag() {
                     let item = SongInfo {
-                        id: index as i32,
+                        id: list.len() as i32,
                         song_path: p.display().to_shared_string(),
                         song_name: tag
                             .title()
@@ -128,6 +173,7 @@ fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
 }
 
 fn main() {
+    let cfg = Config::load();
     let ui = MainWindow::new().unwrap();
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
     let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
@@ -139,26 +185,36 @@ fn main() {
     let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
     let sink = Arc::new(Mutex::new(_sink));
     let ui_state = ui.global::<UIState>();
-    ui_state.set_progress(0.0);
-    ui_state.set_duration(0.0);
+    let song_list = read_song_list(cfg.song_dir.clone());
+    let song_info = song_list
+        .get(cfg.current_song_id.unwrap_or(0))
+        .unwrap()
+        .clone();
+    ui_state.set_progress(cfg.progress);
+    ui_state.set_duration(cfg.duration);
+    ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_paused(true);
-    ui_state.set_play_mode(PlayMode::InOrder);
     ui_state.set_dragging(false);
+    ui_state.set_song_list(song_list.as_slice().into());
+    ui_state.set_current_song(song_info.clone());
+    ui_state.set_lyrics(
+        read_lyrics(song_info.song_path.as_str().into())
+            .as_slice()
+            .into(),
+    );
+    {
+        let file = std::fs::File::open(&song_info.song_path).unwrap();
+        let source = Decoder::try_from(file).unwrap();
+        let sink_guard = sink.lock().unwrap();
+        sink_guard.append(source);
+        sink_guard.pause();
+        let _ = sink_guard.try_seek(Duration::from_secs_f32(cfg.progress));
+    }
 
     // 播放线程
     let ui_weak = ui.as_weak();
     let sink_clone = sink.clone();
     thread::spawn(move || {
-        // 切换到UI线程更新歌曲列表
-        let ui_weak_clone = ui_weak.clone();
-        slint::invoke_from_event_loop(move || {
-            if let Some(ui) = ui_weak_clone.upgrade() {
-                let ui_state = ui.global::<UIState>();
-                ui_state.set_song_list(read_song_list().as_slice().into());
-            }
-        })
-        .unwrap();
-
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 PlayerCommand::Play(song_info) => {
@@ -169,7 +225,6 @@ fn main() {
                         .map(|d| d.as_secs_f32())
                         .unwrap_or(0.0);
                     let sink_guard = sink_clone.lock().unwrap();
-                    sink_guard.stop();
                     sink_guard.clear();
                     sink_guard.append(source);
                     sink_guard.play();
@@ -183,7 +238,7 @@ fn main() {
                             ui_state.set_duration(dura);
                             ui_state.set_user_listening(true);
                             ui_state.set_lyrics(
-                                read_lyrics(song_info.song_path.to_string().into())
+                                read_lyrics(song_info.song_path.as_str().into())
                                     .as_slice()
                                     .into(),
                             );
@@ -386,4 +441,14 @@ fn main() {
     );
 
     ui.run().unwrap();
+    let ui_state = ui.global::<UIState>();
+    Config::save({
+        Config {
+            song_dir: cfg.song_dir,
+            current_song_id: Some(ui_state.get_current_song().id as usize),
+            progress: ui_state.get_progress(),
+            duration: ui_state.get_duration(),
+            play_mode: ui_state.get_play_mode(),
+        }
+    });
 }
