@@ -2,7 +2,7 @@
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::tag::{Accessor, ItemKey};
 use rand::Rng;
-use rodio::{Decoder, Source};
+use rodio::{Decoder, Source, cpal};
 use slint::{Model, ToSharedString};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
@@ -22,7 +22,9 @@ enum PlayerCommand {
 }
 
 fn read_song_list() -> Vec<SongInfo> {
-    let audio_dir = home::home_dir().unwrap().join("Music");
+    let audio_dir = home::home_dir()
+        .expect("no home directory found")
+        .join("Music");
     if !audio_dir.exists() {
         return Vec::new();
     }
@@ -107,7 +109,11 @@ fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
 fn main() {
     let ui = MainWindow::new().unwrap();
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
-    let mut stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
+    let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
+        .expect("no output device available")
+        .with_buffer_size(cpal::BufferSize::Fixed(4096))
+        .open_stream()
+        .expect("failed to open output stream");
     stream_handle.log_on_drop(false);
     let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
     let sink = Arc::new(Mutex::new(_sink));
@@ -160,6 +166,7 @@ fn main() {
                                     .as_slice()
                                     .into(),
                             );
+                            ui_state.set_lyric_viewport_y(0.);
                         }
                     })
                     .unwrap();
