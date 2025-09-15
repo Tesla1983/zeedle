@@ -1,4 +1,4 @@
-import { ListView, Slider, TabWidget, StandardListView } from "std-widgets.slint";
+import { ListView, Slider, TabWidget, StandardListView, LineEdit } from "std-widgets.slint";
 import { NextSongButton, PrevSongButton, PlayPauseButton, InOrderButton, RandomButton } from "button.slint";
 import { SongInfo, TitleBar, SongItem } from "song.slint";
 import { LyricLine } from "lyric.slint";
@@ -43,6 +43,8 @@ export global UIState {
     in property <length> lyric_viewport_y;
     // 当前一行歌词的高度
     in-out property <length> lyric_line_height: 30px;
+    // 歌曲文件夹配置
+    in-out property <string> song_dir;
 }
 
 export component MainWindow inherits Window {
@@ -56,6 +58,7 @@ export component MainWindow inherits Window {
     callback play_prev();
     callback change_progress(float);
     callback switch_mode(PlayMode);
+    callback refresh_song_list(string);
     TabWidget {
         Tab {
             title: "歌曲列表";
@@ -202,12 +205,29 @@ export component MainWindow inherits Window {
 
         Tab {
             title: "设置";
-            Text {
+            VerticalLayout {
                 width: 100%;
                 height: 100%;
-                text: "设置项暂未实现，敬请期待！";
-                horizontal-alignment: center;
-                vertical-alignment: center;
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    Rectangle {
+                        width: 20%;
+                        Text {
+                            text: "歌曲文件夹路径:";
+                        }
+                    }
+
+                    LineEdit {
+                        text <=> UIState.song_dir;
+                        width: 50%;
+                        height: 30px;
+                        accepted(p) => {
+                            refresh_song_list(p);
+                        }
+                    }
+                }
             }
         }
 

@@ -61,12 +61,13 @@ fn get_cfg_path() -> PathBuf {
 
 // ui --> backend
 enum PlayerCommand {
-    Play(SongInfo),       // 从头播放某个音频文件
-    Pause,                // 暂停/继续播放
-    ChangeProgress(f32),  // 拖拽进度条
-    PlayNext,             // 播放下一首
-    PlayPrev,             // 播放上一首
-    SwitchMode(PlayMode), // 切换播放模式
+    Play(SongInfo),           // 从头播放某个音频文件
+    Pause,                    // 暂停/继续播放
+    ChangeProgress(f32),      // 拖拽进度条
+    PlayNext,                 // 播放下一首
+    PlayPrev,                 // 播放上一首
+    SwitchMode(PlayMode),     // 切换播放模式
+    RefreshSongList(PathBuf), // 刷新歌曲列表
 }
 
 fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
@@ -202,6 +203,7 @@ fn main() {
             .as_slice()
             .into(),
     );
+    ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
     {
         let file = std::fs::File::open(&song_info.song_path).unwrap();
         let source = Decoder::try_from(file).unwrap();
@@ -350,6 +352,20 @@ fn main() {
                     })
                     .unwrap();
                 }
+                PlayerCommand::RefreshSongList(path) => {
+                    let new_list = read_song_list(path.clone());
+                    let ui_weak = ui_weak.clone();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let ui_state = ui.global::<UIState>();
+                            ui_state.set_song_list(new_list.as_slice().into());
+                            if let Some(first_song) = new_list.get(0) {
+                                ui.invoke_play(first_song.clone());
+                            }
+                        }
+                    })
+                    .unwrap();
+                }
             }
         }
     });
@@ -390,6 +406,13 @@ fn main() {
         let tx = tx.clone();
         ui.on_switch_mode(move |play_mode| {
             tx.send(PlayerCommand::SwitchMode(play_mode)).unwrap();
+        });
+    }
+    {
+        let tx = tx.clone();
+        ui.on_refresh_song_list(move |path| {
+            tx.send(PlayerCommand::RefreshSongList(path.as_str().into()))
+                .unwrap();
         });
     }
 
@@ -440,11 +463,14 @@ fn main() {
         },
     );
 
+    // 显示 UI
     ui.run().unwrap();
+
+    // 退出前保存状态
     let ui_state = ui.global::<UIState>();
     Config::save({
         Config {
-            song_dir: cfg.song_dir,
+            song_dir: ui_state.get_song_dir().as_str().into(),
             current_song_id: Some(ui_state.get_current_song().id as usize),
             progress: ui_state.get_progress(),
             duration: ui_state.get_duration(),
