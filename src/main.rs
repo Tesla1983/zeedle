@@ -210,23 +210,12 @@ fn main() {
     let sink = Arc::new(Mutex::new(_sink));
     let ui_state = ui.global::<UIState>();
     let song_list = read_song_list(cfg.song_dir.clone());
-    let song_info = song_list
-        .get(cfg.current_song_id.unwrap_or(0))
-        .unwrap()
-        .clone();
     ui_state.set_progress(cfg.progress);
     ui_state.set_duration(cfg.duration);
     ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_paused(true);
     ui_state.set_dragging(false);
     ui_state.set_song_list(song_list.as_slice().into());
-    ui_state.set_current_song(song_info.clone());
-    ui_state.set_lyrics(
-        read_lyrics(song_info.song_path.as_str().into())
-            .as_slice()
-            .into(),
-    );
-    ui_state.set_album_image(read_album_cover(song_info.song_path.as_str().into()));
     ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
     ui_state.set_about_info(
         format!(
@@ -238,7 +227,14 @@ fn main() {
         )
         .into(),
     );
-    {
+    if let Some(song_info) = song_list.get(cfg.current_song_id.unwrap_or(0)) {
+        ui_state.set_current_song(song_info.clone());
+        ui_state.set_lyrics(
+            read_lyrics(song_info.song_path.as_str().into())
+                .as_slice()
+                .into(),
+        );
+        ui_state.set_album_image(read_album_cover(song_info.song_path.as_str().into()));
         let file = std::fs::File::open(&song_info.song_path).unwrap();
         let source = Decoder::try_from(file).unwrap();
         let sink_guard = sink.lock().unwrap();
@@ -402,6 +398,17 @@ fn main() {
                             ui_state.set_song_list(new_list.as_slice().into());
                             if let Some(first_song) = new_list.first() {
                                 ui.invoke_play(first_song.clone());
+                            } else {
+                                ui_state.set_progress(0.);
+                                ui_state.set_duration(0.);
+                                ui_state.set_lyrics(Vec::new().as_slice().into());
+                                ui_state.set_progress_info_str("00:00 / 00:00".to_shared_string());
+                                ui_state.set_album_image(
+                                    slint::Image::load_from_svg_data(include_bytes!(
+                                        "../ui/cover.svg"
+                                    ))
+                                    .unwrap(),
+                                );
                             }
                         }
                     })
