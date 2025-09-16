@@ -392,6 +392,7 @@ fn main() {
                 PlayerCommand::RefreshSongList(path) => {
                     let new_list = read_song_list(path.clone());
                     let ui_weak = ui_weak.clone();
+                    let sink_clone = sink_clone.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
@@ -399,6 +400,15 @@ fn main() {
                             if let Some(first_song) = new_list.first() {
                                 ui.invoke_play(first_song.clone());
                             } else {
+                                let sink_guard = sink_clone.lock().unwrap();
+                                sink_guard.clear();
+                                ui_state.set_current_song(SongInfo {
+                                    id: -1,
+                                    song_path: "".into(),
+                                    song_name: "No song".into(),
+                                    singer: "unknown".into(),
+                                    duration: "00:00".into(),
+                                });
                                 ui_state.set_progress(0.);
                                 ui_state.set_duration(0.);
                                 ui_state.set_lyrics(Vec::new().as_slice().into());
