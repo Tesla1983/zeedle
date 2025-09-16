@@ -291,10 +291,10 @@ fn main() {
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 let ui_state = ui.global::<UIState>();
-                                ui.invoke_play(
-                                    ui_state.get_song_list().iter().collect::<Vec<_>>()[0].clone(),
-                                );
-                                ui_state.set_paused(false);
+                                if let Some(song) = ui_state.get_song_list().iter().next() {
+                                    ui.invoke_play(song.clone());
+                                    ui_state.set_paused(false);
+                                }
                             }
                         })
                         .unwrap();
@@ -338,17 +338,21 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
-                            let mut rng = rand::rng();
-                            let next_id1 = rng.random_range(..song_list.len());
-                            let id = ui_state.get_current_song().id as usize;
-                            let next_id2 = if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                            let next_id = match ui_state.get_play_mode() {
-                                PlayMode::InOrder => next_id2,
-                                PlayMode::Random => next_id1,
-                            };
-                            if let Some(next_song) = song_list.get(next_id) {
-                                let song_to_play = next_song.clone();
-                                ui.invoke_play(song_to_play);
+                            if !song_list.is_empty() {
+                                let mut rng = rand::rng();
+                                let next_id1 = rng.random_range(..song_list.len());
+                                let id = ui_state.get_current_song().id as usize;
+                                let mut next_id2 =
+                                    if id + 1 >= song_list.len() { 0 } else { id + 1 };
+                                next_id2 = next_id2.min(song_list.len() - 1);
+                                let next_id = match ui_state.get_play_mode() {
+                                    PlayMode::InOrder => next_id2,
+                                    PlayMode::Random => next_id1,
+                                };
+                                if let Some(next_song) = song_list.get(next_id) {
+                                    let song_to_play = next_song.clone();
+                                    ui.invoke_play(song_to_play);
+                                }
                             }
                         }
                     })
@@ -360,17 +364,20 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
-                            let mut rng = rand::rng();
-                            let next_id1 = rng.random_range(..song_list.len());
-                            let id = ui_state.get_current_song().id as usize;
-                            let next_id2 = if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                            let next_id = match ui_state.get_play_mode() {
-                                PlayMode::InOrder => next_id2,
-                                PlayMode::Random => next_id1,
-                            };
-                            if let Some(next_song) = song_list.get(next_id) {
-                                let song_to_play = next_song.clone();
-                                ui.invoke_play(song_to_play);
+                            if !song_list.is_empty() {
+                                let mut rng = rand::rng();
+                                let next_id1 = rng.random_range(..song_list.len());
+                                let id = ui_state.get_current_song().id as usize;
+                                let mut next_id2 = if id as i32 - 1 < 0 { 0 } else { id - 1 };
+                                next_id2 = next_id2.min(song_list.len() - 1);
+                                let next_id = match ui_state.get_play_mode() {
+                                    PlayMode::InOrder => next_id2,
+                                    PlayMode::Random => next_id1,
+                                };
+                                if let Some(next_song) = song_list.get(next_id) {
+                                    let song_to_play = next_song.clone();
+                                    ui.invoke_play(song_to_play);
+                                }
                             }
                         }
                     })
@@ -393,7 +400,7 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             ui_state.set_song_list(new_list.as_slice().into());
-                            if let Some(first_song) = new_list.get(0) {
+                            if let Some(first_song) = new_list.first() {
                                 ui.invoke_play(first_song.clone());
                             }
                         }
