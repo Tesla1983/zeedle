@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::picture::PictureType;
 use lofty::tag::{Accessor, ItemKey};
 use rand::Rng;
 use rodio::{Decoder, Source, cpal};
@@ -173,6 +174,28 @@ fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
     return Vec::new();
 }
 
+fn read_album_cover(p: PathBuf) -> slint::Image {
+    if let Ok(tagged) = lofty::read_from_path(&p) {
+        if let Some(tag) = tagged.primary_tag() {
+            if let Some(picture) = tag.pictures().iter().find(|pic| {
+                pic.pic_type() == PictureType::CoverFront
+                    || pic.pic_type() == PictureType::CoverBack
+            }) {
+                if let Ok(img) = image::load_from_memory(picture.data()) {
+                    let rgba = img.into_rgba8();
+                    let (width, height) = rgba.dimensions();
+                    let buffer = rgba.into_vec();
+                    let mut pixel_buffer = slint::SharedPixelBuffer::new(width, height);
+                    let pixel_buffer_data = pixel_buffer.make_mut_bytes();
+                    pixel_buffer_data.copy_from_slice(&buffer);
+                    return slint::Image::from_rgba8(pixel_buffer);
+                }
+            }
+        }
+    }
+    slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap()
+}
+
 fn main() {
     let cfg = Config::load();
     let ui = MainWindow::new().unwrap();
@@ -203,6 +226,7 @@ fn main() {
             .as_slice()
             .into(),
     );
+    ui_state.set_album_image(read_album_cover(song_info.song_path.as_str().into()));
     ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
     ui_state.set_about_info(
         format!(
@@ -232,6 +256,7 @@ fn main() {
                 PlayerCommand::Play(song_info) => {
                     let file = std::fs::File::open(&song_info.song_path).unwrap();
                     let source = Decoder::try_from(file).unwrap();
+                    let lyrics = read_lyrics(song_info.song_path.as_str().into());
                     let dura = source
                         .total_duration()
                         .map(|d| d.as_secs_f32())
@@ -249,12 +274,11 @@ fn main() {
                             ui_state.set_progress(0.0);
                             ui_state.set_duration(dura);
                             ui_state.set_user_listening(true);
-                            ui_state.set_lyrics(
-                                read_lyrics(song_info.song_path.as_str().into())
-                                    .as_slice()
-                                    .into(),
-                            );
+                            ui_state.set_lyrics(lyrics.as_slice().into());
                             ui_state.set_lyric_viewport_y(0.);
+                            ui_state.set_album_image(read_album_cover(
+                                song_info.song_path.as_str().into(),
+                            ));
                         }
                     })
                     .unwrap();

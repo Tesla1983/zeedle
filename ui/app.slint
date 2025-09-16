@@ -47,6 +47,8 @@ export global UIState {
     in-out property <string> song_dir;
     // 关于信息
     in property <string> about_info;
+    // 专辑封面图像
+    in property <image> album_image: @image-url("cover.svg");
 }
 
 export component MainWindow inherits Window {
@@ -61,7 +63,7 @@ export component MainWindow inherits Window {
     callback change_progress(float);
     callback switch_mode(PlayMode);
     callback refresh_song_list(string);
-    TabWidget {
+    tabs := TabWidget {
         Tab {
             title: "歌曲列表";
             VerticalLayout {
@@ -93,16 +95,36 @@ export component MainWindow inherits Window {
                 }
 
                 HorizontalLayout {
+                    height: 40px;
                     alignment: center;
-                    Rectangle {
-                        width: 30%;
-                        Text {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
-                            vertical-alignment: center;
-                            horizontal-alignment: center;
-                            wrap: TextWrap.word-wrap;
+                    TouchArea {
+                        width: 35%;
+                        clicked => {
+                            tabs.current-index = 1; // 切换到歌词页
+                        }
+                        HorizontalLayout {
+                            alignment: start;
+                            spacing: 3px;
+                            Image {
+                                y: 0;
+                                width: 40px;
+                                height: 40px;
+                                source: UIState.album_image;
+                                image-fit: contain;
+                            }
+
+                            Rectangle {
+                                width: 80%;
+                                height: 100%;
+                                Text {
+                                    width: 100%;
+                                    x: parent.width / 2 - self.width / 2;
+                                    text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                    wrap: TextWrap.word-wrap;
+                                }
+                            }
                         }
                     }
 
@@ -135,13 +157,13 @@ export component MainWindow inherits Window {
 
                     Rectangle {
                         width: 6%;
-                        play-btn := PlayPauseButton {
+                        PlayPauseButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
                             w: 20;
                             h: 20;
-                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
-                    paused <=> UIState.paused;
+                            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+                            paused <=> UIState.paused;
                             toggled => {
                                 root.toggle_play();
                             }
@@ -177,7 +199,7 @@ export component MainWindow inherits Window {
                     }
 
                     Rectangle {
-                        width: 30%;
+                        width: 35%;
                         Text {
                             x: parent.width / 2 - self.width / 2;
                             text: UIState.progress_info_str;
@@ -186,12 +208,43 @@ export component MainWindow inherits Window {
                         }
                     }
                 }
+
+                Rectangle {
+                    width: 100%;
+                    height: 5px;
+                    background: transparent;
+                }
             }
         }
 
         Tab {
             title: "歌词";
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                background: transparent;
+                Image {
+                    source: UIState.album_image;
+                    image-fit: fill;
+                }
+
+                opacity: 0.2;
+                z: -10;
+            }
+
+            TouchArea {
+                x: 0;
+                width: 20%;
+                height: 100%;
+                opacity: 0.2;
+                z: -5;
+                clicked => {
+                    tabs.current-index = 0; // 切换到歌曲列表页
+                }
+            }
+
             VerticalLayout {
+                alignment: center;
                 lyric-win := ListView {
                     height: 100%;
                     width: 100%;
