@@ -62,7 +62,7 @@ export component SongItem inherits Window {
     height: 30px;
     in property <SongInfo> info:{ id:0, song_name:"xxx", singer:"xxx", duration:"xxx", song_path:"xxx" };
     callback double_clicked();
-    background: area.has-hover ? rgb(50, 50, 50) : transparent;
+    background: area.has-hover ? rgb(40, 40, 40) : transparent;
     VerticalLayout {
         area := TouchArea {
             double-clicked => {
