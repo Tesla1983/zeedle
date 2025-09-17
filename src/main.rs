@@ -4,7 +4,7 @@ use lofty::picture::PictureType;
 use lofty::tag::{Accessor, ItemKey};
 use rand::Rng;
 use rodio::{Decoder, Source, cpal};
-use slint::{Model, ToSharedString};
+use slint::{Model, SharedString, ToSharedString};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
@@ -196,37 +196,55 @@ fn read_album_cover(p: PathBuf) -> slint::Image {
     slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap()
 }
 
-fn main() {
-    let cfg = Config::load();
-    let ui = MainWindow::new().unwrap();
-    let (tx, rx) = mpsc::channel::<PlayerCommand>();
-    let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
-        .expect("no output device available")
-        .with_buffer_size(cpal::BufferSize::Fixed(4096))
-        .open_stream()
-        .expect("failed to open output stream");
-    stream_handle.log_on_drop(false);
-    let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
-    let sink = Arc::new(Mutex::new(_sink));
+fn get_about_info() -> SharedString {
+    format!(
+        "{}\n\n{}\n\nauthor: {}\n\nversion: {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_DESCRIPTION"),
+        env!("CARGO_PKG_AUTHORS"),
+        env!("CARGO_PKG_VERSION")
+    )
+    .into()
+}
+
+fn set_raw_ui_state(ui: &MainWindow) {
     let ui_state = ui.global::<UIState>();
+    ui_state.set_progress(0.0);
+    ui_state.set_duration(0.0);
+    ui_state.set_about_info(get_about_info());
+    ui_state.set_album_image(
+        slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap(),
+    );
+    ui_state.set_current_song(SongInfo {
+        id: -1,
+        song_path: "".into(),
+        song_name: "No song".into(),
+        singer: "unknown".into(),
+        duration: "00:00".into(),
+    });
+    ui_state.set_lyrics(Vec::new().as_slice().into());
+    ui_state.set_progress_info_str("00:00 / 00:00".to_shared_string());
+    ui_state.set_song_list(Vec::new().as_slice().into());
+    ui_state.set_song_dir(Config::default().song_dir.to_str().unwrap().into());
+    ui_state.set_play_mode(PlayMode::InOrder);
+    ui_state.set_paused(true);
+    ui_state.set_dragging(false);
+    ui_state.set_user_listening(false);
+    ui_state.set_lyric_viewport_y(0.);
+}
+
+fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
+    let ui_state = ui.global::<UIState>();
+    let cfg = Config::load();
     let song_list = read_song_list(cfg.song_dir.clone());
     ui_state.set_progress(cfg.progress);
     ui_state.set_duration(cfg.duration);
-    ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_paused(true);
-    ui_state.set_dragging(false);
+    ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_song_list(song_list.as_slice().into());
     ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
-    ui_state.set_about_info(
-        format!(
-            "{}\n\n{}\n\nauthor: {}\n\nversion: {}",
-            env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_DESCRIPTION"),
-            env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_VERSION")
-        )
-        .into(),
-    );
+    ui_state.set_about_info(get_about_info());
+
     if let Some(song_info) = song_list.get(cfg.current_song_id.unwrap_or(0)) {
         ui_state.set_current_song(song_info.clone());
         ui_state.set_lyrics(
@@ -237,11 +255,25 @@ fn main() {
         ui_state.set_album_image(read_album_cover(song_info.song_path.as_str().into()));
         let file = std::fs::File::open(&song_info.song_path).unwrap();
         let source = Decoder::try_from(file).unwrap();
-        let sink_guard = sink.lock().unwrap();
-        sink_guard.append(source);
-        sink_guard.pause();
-        let _ = sink_guard.try_seek(Duration::from_secs_f32(cfg.progress));
+        sink.append(source);
+        sink.pause();
+        sink.try_seek(Duration::from_secs_f32(cfg.progress))
+            .expect("failed to seek");
     }
+}
+
+fn main() {
+    let ui = MainWindow::new().unwrap();
+    let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
+        .expect("no output device available")
+        .with_buffer_size(cpal::BufferSize::Fixed(4096))
+        .open_stream()
+        .expect("failed to open output stream");
+    stream_handle.log_on_drop(false);
+    let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
+    let sink = Arc::new(Mutex::new(_sink));
+    let (tx, rx) = mpsc::channel::<PlayerCommand>();
+    set_start_ui_state(&ui, &sink.lock().unwrap());
 
     // 播放线程
     let ui_weak = ui.as_weak();
@@ -402,23 +434,7 @@ fn main() {
                             } else {
                                 let sink_guard = sink_clone.lock().unwrap();
                                 sink_guard.clear();
-                                ui_state.set_current_song(SongInfo {
-                                    id: -1,
-                                    song_path: "".into(),
-                                    song_name: "No song".into(),
-                                    singer: "unknown".into(),
-                                    duration: "00:00".into(),
-                                });
-                                ui_state.set_progress(0.);
-                                ui_state.set_duration(0.);
-                                ui_state.set_lyrics(Vec::new().as_slice().into());
-                                ui_state.set_progress_info_str("00:00 / 00:00".to_shared_string());
-                                ui_state.set_album_image(
-                                    slint::Image::load_from_svg_data(include_bytes!(
-                                        "../ui/cover.svg"
-                                    ))
-                                    .unwrap(),
-                                );
+                                set_raw_ui_state(&ui);
                             }
                         }
                     })

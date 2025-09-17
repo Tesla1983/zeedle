@@ -232,14 +232,18 @@ export component MainWindow inherits Window {
                 z: -10;
             }
 
-            TouchArea {
+            Rectangle {
                 x: 0;
                 width: 20%;
                 height: 100%;
-                opacity: 0.2;
-                z: -5;
-                clicked => {
-                    tabs.current-index = 0; // 切换到歌曲列表页
+                background: area.has-hover ? rgba(50, 50, 50, 0.3) : transparent;
+                area := TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    z: -5;
+                    clicked => {
+                        tabs.current-index = 0; // 切换到歌曲列表页
+                    }
                 }
             }
 
