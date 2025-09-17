@@ -376,6 +376,7 @@ fn main() {
                                 let next_id = match ui_state.get_play_mode() {
                                     PlayMode::InOrder => next_id2,
                                     PlayMode::Random => next_id1,
+                                    PlayMode::Recursive => id,
                                 };
                                 if let Some(next_song) = song_list.get(next_id) {
                                     let song_to_play = next_song.clone();
@@ -401,6 +402,7 @@ fn main() {
                                 let next_id = match ui_state.get_play_mode() {
                                     PlayMode::InOrder => next_id2,
                                     PlayMode::Random => next_id1,
+                                    PlayMode::Recursive => id,
                                 };
                                 if let Some(next_song) = song_list.get(next_id) {
                                     let song_to_play = next_song.clone();

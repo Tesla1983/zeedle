@@ -177,44 +177,138 @@ export component PlayPauseButton inherits Window {
 }
 
 export component InOrderButton inherits Window {
-    callback clicked();
     in-out property <float> w:50;
     in-out property <float> h:50;
     in-out property <bool> selected;
     width: w * 1px;
     height: h * 1px;
+    Path {
+        MoveTo {
+            x: 45;
+            y: 25;
+        }
+
+        ArcTo {
+            x: 25;
+            y: 5;
+            radius-x: 20;
+            radius-y: 20;
+            x-rotation: 0;
+            large-arc: true;
+            sweep: true;
+        }
+
+        LineTo {
+            x: 20;
+            y: 2;
+        }
+
+        MoveTo {
+            x: 25;
+            y: 5;
+        }
+
+        LineTo {
+            x: 21;
+            y: 9;
+        }
+
+        stroke-width: 1px;
+        stroke: selected ? cyan : gray;
+    }
+}
+
+export component RecursiveButton inherits Window {
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <bool> selected;
+    width: w * 1px;
+    height: h * 1px;
+    Path {
+        MoveTo {
+            x: 45;
+            y: 25;
+        }
+
+        ArcTo {
+            x: 25;
+            y: 5;
+            radius-x: 20;
+            radius-y: 20;
+            x-rotation: 0;
+            large-arc: true;
+            sweep: true;
+        }
+
+        LineTo {
+            x: 20;
+            y: 2;
+        }
+
+        MoveTo {
+            x: 25;
+            y: 5;
+        }
+
+        LineTo {
+            x: 21;
+            y: 9;
+        }
+
+        MoveTo {
+            x: 25;
+            y: 20;
+        }
+
+        LineTo {
+            x: 25;
+            y: 30;
+        }
+
+        MoveTo {
+            x: 25;
+            y: 20;
+        }
+
+        LineTo {
+            x: 22;
+            y: 22;
+        }
+
+        stroke-width: 1px;
+        stroke: selected ? cyan : gray;
+    }
+}
+
+@rust-attr(derive(serde::Serialize, serde::Deserialize))
+export enum PlayMode { 
+    InOrder, 
+    Recursive, 
+    Random
+ }
+
+export component OverlapButton inherits Window {
+    in-out property <float> w:50;
+    in-out property <float> h:50;
+    in-out property <PlayMode> mode;
+    callback clicked();
+    width: w * 1px;
+    height: h * 1px;
     TouchArea {
+        width: 100%;
+        height: 100%;
         clicked => {
             root.clicked();
-        };
-        Path {
-            MoveTo {
-                x: 0;
-                y: h / 2;
-            }
-
-            LineTo {
-                x: h;
-                y: h / 2;
-            }
-
-            LineTo {
-                x: h * 0.7;
-                y: h * 0.2;
-            }
-
-            MoveTo {
-                x: h;
-                y: h / 2;
-            }
-
-            LineTo {
-                x: h * 0.7;
-                y: h * 0.8;
-            }
-
-            stroke: selected ? cyan : gray;
-            stroke-width: 1px;
+        }
+        if mode == PlayMode.Recursive: RecursiveButton {
+            w: root.w;
+            h: root.h;
+            selected: mode == PlayMode.Recursive || mode == PlayMode.InOrder;
+        }
+        if mode != PlayMode.Recursive: InOrderButton {
+            w: root.w;
+            h: root.h;
+            selected: mode == PlayMode.Recursive || mode == PlayMode.InOrder;
         }
     }
 }

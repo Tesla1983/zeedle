@@ -1,14 +1,8 @@
 import { ListView, Slider, TabWidget, StandardListView, LineEdit } from "std-widgets.slint";
-import { NextSongButton, PrevSongButton, PlayPauseButton, InOrderButton, RandomButton } from "button.slint";
+import { NextSongButton, PrevSongButton, PlayPauseButton, OverlapButton, RandomButton, PlayMode } from "button.slint";
 import { SongInfo, TitleBar, SongItem } from "song.slint";
 import { LyricLine } from "lyric.slint";
 
-// play mode
-@rust-attr(derive(serde::Serialize, serde::Deserialize))
-export enum PlayMode {
-    InOrder,
-    Random,
-}
 
 // lyric item
 export struct LyricItem {
@@ -52,8 +46,10 @@ export global UIState {
 }
 
 export component MainWindow inherits Window {
-    width: 750px;
-    height: 500px;
+    preferred-width: 750px;
+    preferred-height: 500px;
+    min-height: 500px;
+    min-width: 750px;
     title: "Vanilla Player";
     icon: @image-url("cover.svg");
     callback toggle_play();
@@ -80,7 +76,7 @@ export component MainWindow inherits Window {
                     }
                 }
 
-                progress-bar := Slider {
+                Slider {
                     minimum: 0;
                     maximum: UIState.duration;
                     // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
@@ -95,20 +91,21 @@ export component MainWindow inherits Window {
                 }
 
                 HorizontalLayout {
-                    height: 40px;
+                    height: 10%;
                     alignment: center;
                     TouchArea {
                         width: 35%;
-                        clicked => {
+                        height: 100%;
+                        double-clicked => {
                             tabs.current-index = 1; // 切换到歌词页
                         }
                         HorizontalLayout {
                             alignment: start;
                             spacing: 3px;
                             Image {
-                                y: 0;
-                                width: 40px;
-                                height: 40px;
+                                y: parent.height / 2 - self.height / 2;
+                                width: 45px;
+                                height: 45px;
                                 source: UIState.album_image;
                                 image-fit: contain;
                             }
@@ -130,14 +127,18 @@ export component MainWindow inherits Window {
 
                     Rectangle {
                         width: 6%;
-                        InOrderButton {
+                        OverlapButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
-                            selected: UIState.play_mode == PlayMode.InOrder;
                             w: 20;
                             h: 20;
+                            mode <=> UIState.play_mode;
                             clicked => {
-                                switch_mode(PlayMode.InOrder);
+                                if (UIState.play_mode == PlayMode.InOrder) {
+                                    switch_mode(PlayMode.Recursive);
+                                } else {
+                                    switch_mode(PlayMode.InOrder);
+                                }
                             }
                         }
                     }
@@ -200,6 +201,12 @@ export component MainWindow inherits Window {
 
                     Rectangle {
                         width: 35%;
+                        TouchArea {
+                            double-clicked => {
+                                tabs.current-index = 1; // 切换到歌词页
+                            }
+                        }
+
                         Text {
                             x: parent.width / 2 - self.width / 2;
                             text: UIState.progress_info_str;
@@ -220,6 +227,12 @@ export component MainWindow inherits Window {
         Tab {
             title: "歌词";
             Rectangle {
+                TouchArea {
+                    double-clicked => {
+                        tabs.current-index = 0; // 切换到歌曲列表页
+                    }
+                }
+
                 width: 100%;
                 height: 100%;
                 background: transparent;
@@ -230,21 +243,6 @@ export component MainWindow inherits Window {
 
                 opacity: 0.2;
                 z: -10;
-            }
-
-            Rectangle {
-                x: 0;
-                width: 20%;
-                height: 100%;
-                background: area.has-hover ? rgba(50, 50, 50, 0.3) : transparent;
-                area := TouchArea {
-                    width: 100%;
-                    height: 100%;
-                    z: -5;
-                    clicked => {
-                        tabs.current-index = 0; // 切换到歌曲列表页
-                    }
-                }
             }
 
             VerticalLayout {
@@ -295,6 +293,7 @@ export component MainWindow inherits Window {
             Text {
                 width: 100%;
                 height: 100%;
+                font-size: 16px;
                 text: UIState.about_info;
                 horizontal-alignment: center;
                 vertical-alignment: center;
