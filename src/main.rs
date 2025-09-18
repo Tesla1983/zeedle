@@ -141,7 +141,7 @@ fn main() {
                     sink_guard.clear();
                     sink_guard.append(source);
                     sink_guard.play();
-                    log::info!("start playing: {}", song_info.song_name);
+                    log::info!("start playing: <{}>", song_info.song_name);
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
@@ -249,7 +249,7 @@ fn main() {
                             .unwrap();
                         }
                         Err(e) => {
-                            log::error!("Failed to seek: {}", e);
+                            log::error!("Failed to seek: <{}>", e);
                         }
                     }
                 }
@@ -328,7 +328,7 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             ui_state.set_play_mode(m);
-                            log::info!("play mode switched to {:?}", m);
+                            log::info!("play mode switched to <{:?}>", m);
                         }
                     })
                     .unwrap();
@@ -362,7 +362,7 @@ fn main() {
         let tx = tx.clone();
         ui.on_play(move |song_info: SongInfo, trigger: TriggerSource| {
             log::info!(
-                "request to play: {} from {:?}",
+                "request to play: <{}> from source <{:?}>",
                 song_info.song_name,
                 trigger
             );
@@ -381,7 +381,7 @@ fn main() {
     {
         let tx = tx.clone();
         ui.on_change_progress(move |new_progress: f32| {
-            log::info!("request to change progress to: {}", new_progress);
+            log::info!("request to change progress to: <{}>", new_progress);
             tx.send(PlayerCommand::ChangeProgress(new_progress))
                 .expect("failed to send change progress command");
         });
@@ -455,7 +455,7 @@ fn main() {
                                     (5 as f32 - idx as f32) * ui_state.get_lyric_line_height(),
                                 );
                             }
-                            log::debug!("lyric changed to: {:?}", item);
+                            log::debug!("lyric changed to: <{:?}>", item);
                             break;
                         }
                     }
