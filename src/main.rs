@@ -10,6 +10,7 @@ mod slint_types;
 use slint_types::*;
 mod config;
 use config::Config;
+mod logger;
 mod utils;
 
 /// Message in channel: ui --> backend
@@ -31,7 +32,8 @@ fn set_raw_ui_state(ui: &MainWindow) {
     ui_state.set_duration(0.0);
     ui_state.set_about_info(utils::get_about_info());
     ui_state.set_album_image(
-        slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap(),
+        slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg"))
+            .expect("failed to load default image"),
     );
     ui_state.set_current_song(SongInfo {
         id: -1,
@@ -43,7 +45,13 @@ fn set_raw_ui_state(ui: &MainWindow) {
     ui_state.set_lyrics(Vec::new().as_slice().into());
     ui_state.set_progress_info_str("00:00 / 00:00".to_shared_string());
     ui_state.set_song_list(Vec::new().as_slice().into());
-    ui_state.set_song_dir(Config::default().song_dir.to_str().unwrap().into());
+    ui_state.set_song_dir(
+        Config::default()
+            .song_dir
+            .to_str()
+            .expect("failed to convert Path to String")
+            .into(),
+    );
     ui_state.set_play_mode(PlayMode::InOrder);
     ui_state.set_paused(true);
     ui_state.set_dragging(false);
@@ -61,7 +69,12 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     ui_state.set_paused(true);
     ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_song_list(song_list.as_slice().into());
-    ui_state.set_song_dir(cfg.song_dir.to_str().unwrap().into());
+    ui_state.set_song_dir(
+        cfg.song_dir
+            .to_str()
+            .expect("failed to convert Path to String")
+            .into(),
+    );
     ui_state.set_about_info(utils::get_about_info());
 
     if let Some(song_info) = song_list.get(cfg.current_song_id.unwrap_or(0)) {
@@ -72,19 +85,25 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
                 .into(),
         );
         ui_state.set_album_image(utils::read_album_cover(song_info.song_path.as_str().into()));
-        let file = std::fs::File::open(&song_info.song_path).unwrap();
-        let source = Decoder::try_from(file).unwrap();
+        let file = std::fs::File::open(&song_info.song_path)
+            .expect(format!("failed to open audio file: {}", song_info.song_path).as_str());
+        let source = Decoder::try_from(file).expect("failed to decode audio file");
         sink.append(source);
         sink.pause();
         sink.try_seek(Duration::from_secs_f32(cfg.progress))
-            .expect("failed to seek");
+            .expect("failed to seek to given position");
     }
 }
 
 fn main() {
+    logger::init_default_logger();
+    // when panics happen, auto port errors to log
+    std::panic::set_hook(Box::new(|info| {
+        log::error!("panic occurred: {}", info);
+    }));
     let ins = single_instance::SingleInstance::new("Vanilla Player").unwrap();
     if !ins.is_single() {
-        println!("程序已经在运行！");
+        log::warn!("Vanilla player can only run one instance !");
         return;
     }
     let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
@@ -98,18 +117,21 @@ fn main() {
     // 创建消息通道 ui --> backend
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
     // 初始化 UI 状态
-    let ui = MainWindow::new().unwrap();
+    let ui = MainWindow::new().expect("failed to create UI");
     set_start_ui_state(&ui, &sink.lock().unwrap());
+    log::info!("ui state initialized");
 
     // 播放线程
     let ui_weak = ui.as_weak();
     let sink_clone = sink.clone();
     thread::spawn(move || {
+        log::info!("player thread running...");
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 PlayerCommand::Play(song_info, trigger) => {
-                    let file = std::fs::File::open(&song_info.song_path).unwrap();
-                    let source = Decoder::try_from(file).unwrap();
+                    let file = std::fs::File::open(&song_info.song_path)
+                        .expect("failed to open audio file");
+                    let source = Decoder::try_from(file).expect("failed to decode audio file");
                     let lyrics = utils::read_lyrics(song_info.song_path.as_str().into());
                     let dura = source
                         .total_duration()
@@ -119,11 +141,11 @@ fn main() {
                     sink_guard.clear();
                     sink_guard.append(source);
                     sink_guard.play();
+                    log::info!("start playing: {}", song_info.song_name);
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-
                             match trigger {
                                 TriggerSource::ClickItem => {
                                     let mut history =
@@ -164,7 +186,7 @@ fn main() {
                                 song_info.song_path.as_str().into(),
                             ));
 
-                            println!(
+                            log::debug!(
                                 "{:?} / {}",
                                 ui_state
                                     .get_play_history()
@@ -181,7 +203,7 @@ fn main() {
                     let sink_guard = sink_clone.lock().unwrap();
                     let ui_weak = ui_weak.clone();
                     if sink_guard.empty() {
-                        // 如果当前没有播放任何歌曲，则播放第一首
+                        log::info!("sink is empty, play the first song in the list");
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 let ui_state = ui.global::<UIState>();
@@ -206,6 +228,7 @@ fn main() {
                             }
                         })
                         .unwrap();
+                        log::info!("pause/play toggled");
                     }
                 }
                 PlayerCommand::ChangeProgress(new_progress) => {
@@ -222,7 +245,7 @@ fn main() {
                             .unwrap();
                         }
                         Err(e) => {
-                            eprintln!("Failed to seek: {}", e);
+                            log::error!("Failed to seek: {}", e);
                         }
                     }
                 }
@@ -231,8 +254,9 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-                            // 如果处在历史播放模式，则先尝试从历史记录中获取下一首
                             if ui_state.get_history_index() > 0 {
+                                // 如果处在历史播放模式，则先尝试从历史记录中获取下一首
+                                log::info!("playing next from history");
                                 let history =
                                     ui_state.get_play_history().iter().collect::<Vec<_>>();
                                 if let Some(song) = history
@@ -241,9 +265,12 @@ fn main() {
                                     .nth((ui_state.get_history_index() - 1) as usize)
                                 {
                                     ui.invoke_play(song.clone(), TriggerSource::Next);
+                                } else {
+                                    log::warn!("failed to play next song in history");
                                 }
                             } else {
                                 // 否则根据播放模式获取下一首
+                                log::info!("playing next from play mode");
                                 let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
                                 if !song_list.is_empty() {
                                     let mut rng = rand::rng();
@@ -260,6 +287,8 @@ fn main() {
                                     if let Some(next_song) = song_list.get(next_id) {
                                         let song_to_play = next_song.clone();
                                         ui.invoke_play(song_to_play.clone(), TriggerSource::Next);
+                                    } else {
+                                        log::warn!("failed to play next from play mode");
                                     }
                                 }
                             }
@@ -280,8 +309,10 @@ fn main() {
                                 .nth((ui_state.get_history_index() + 1) as usize)
                             {
                                 ui.invoke_play(song.clone(), TriggerSource::Prev);
+                                log::info!("playing prev from history");
                             } else {
                                 ui.invoke_play(cur_song, TriggerSource::Prev);
+                                log::info!("can't get earlier history, fall back to replay oldest history song...");
                             }
                         }
                     })
@@ -293,6 +324,7 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             ui_state.set_play_mode(m);
+                            log::info!("play mode switched to {:?}", m);
                         }
                     })
                     .unwrap();
@@ -311,6 +343,7 @@ fn main() {
                                 let sink_guard = sink_clone.lock().unwrap();
                                 sink_guard.clear();
                                 set_raw_ui_state(&ui);
+                                log::warn!("song list is empty, reset UI state");
                             }
                         }
                     })
@@ -324,45 +357,61 @@ fn main() {
     {
         let tx = tx.clone();
         ui.on_play(move |song_info: SongInfo, trigger: TriggerSource| {
-            tx.send(PlayerCommand::Play(song_info, trigger)).unwrap();
+            log::info!(
+                "request to play: {} from {:?}",
+                song_info.song_name,
+                trigger
+            );
+            tx.send(PlayerCommand::Play(song_info, trigger))
+                .expect("failed to send play command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_toggle_play(move || {
-            tx.send(PlayerCommand::Pause).unwrap();
+            log::info!("request to toggle play/pause");
+            tx.send(PlayerCommand::Pause)
+                .expect("failed to send pause command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_change_progress(move |new_progress: f32| {
+            log::info!("request to change progress to: {}", new_progress);
             tx.send(PlayerCommand::ChangeProgress(new_progress))
-                .unwrap();
+                .expect("failed to send change progress command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_play_next(move || {
-            tx.send(PlayerCommand::PlayNext).unwrap();
+            log::info!("request to play next");
+            tx.send(PlayerCommand::PlayNext)
+                .expect("failed to send play next command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_play_prev(move || {
-            tx.send(PlayerCommand::PlayPrev).unwrap();
+            log::info!("request to play prev");
+            tx.send(PlayerCommand::PlayPrev)
+                .expect("failed to send play prev command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_switch_mode(move |play_mode| {
-            tx.send(PlayerCommand::SwitchMode(play_mode)).unwrap();
+            log::info!("request to switch play mode to: {:?}", play_mode);
+            tx.send(PlayerCommand::SwitchMode(play_mode))
+                .expect("failed to send switch mode command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_refresh_song_list(move |path| {
+            log::info!("request to refresh song list from: {:?}", path);
             tx.send(PlayerCommand::RefreshSongList(path.as_str().into()))
-                .unwrap();
+                .expect("failed to send refresh song list command");
         });
     }
 
@@ -393,7 +442,8 @@ fn main() {
                 );
                 if !ui_state.get_paused() {
                     for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
-                        if (item.time - ui_state.get_progress()).abs() < 0.10 {
+                        let delta = item.time - ui_state.get_progress();
+                        if delta < 0. && delta > -0.20 {
                             if idx <= 5 {
                                 ui_state.set_lyric_viewport_y(0.)
                             } else {
@@ -401,6 +451,7 @@ fn main() {
                                     (5 as f32 - idx as f32) * ui_state.get_lyric_line_height(),
                                 );
                             }
+                            log::debug!("lyric changed to: {:?}", item);
                             break;
                         }
                     }
@@ -408,15 +459,17 @@ fn main() {
                 // 如果播放完毕，且之前是在播放状态，则自动播放下一首
                 if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
                     ui.invoke_play_next();
+                    log::info!("song ended, auto play next");
                 }
             }
         },
     );
 
     // 显示 UI
-    ui.run().unwrap();
+    ui.run().expect("failed to run UI");
 
     // 退出前保存状态
+    log::info!("saving config...");
     let ui_state = ui.global::<UIState>();
     Config::save({
         Config {
@@ -427,4 +480,5 @@ fn main() {
             play_mode: ui_state.get_play_mode(),
         }
     });
+    log::info!("app exited");
 }
