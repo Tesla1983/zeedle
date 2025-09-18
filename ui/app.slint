@@ -11,6 +11,13 @@ export struct LyricItem {
     text: string,
 } 
 
+// trigger source
+export enum TriggerSource {
+    ClickItem,
+    Prev,
+    Next,
+}
+
 // ui state
 export global UIState {
     // 当前播放进度 (秒)
@@ -43,6 +50,10 @@ export global UIState {
     in property <string> about_info;
     // 专辑封面图像
     in property <image> album_image;
+    // 播放历史
+    in property <[SongInfo]> play_history;
+    // 播放历史索引
+    in property <int> history_index: 0;
 }
 
 export component MainWindow inherits Window {
@@ -53,7 +64,7 @@ export component MainWindow inherits Window {
     title: "Vanilla Player";
     icon: @image-url("cover.svg");
     callback toggle_play();
-    callback play(SongInfo);
+    callback play(SongInfo, TriggerSource);
     callback play_next();
     callback play_prev();
     callback change_progress(float);
@@ -71,7 +82,7 @@ export component MainWindow inherits Window {
                     for item in UIState.song_list: SongItem {
                         info: item;
                         double_clicked => {
-                            play(item);
+                            play(item, TriggerSource.ClickItem);
                         }
                     }
                 }

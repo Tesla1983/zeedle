@@ -11,6 +11,7 @@ use std::thread;
 use std::time::Duration;
 slint::include_modules!();
 
+/// Used to save/recover ui state
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct Config {
     song_dir: PathBuf,
@@ -34,6 +35,7 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Load config from file, or return default if file not exists or invalid
     fn load() -> Self {
         let cfg_path = get_cfg_path();
         if cfg_path.exists() {
@@ -44,6 +46,7 @@ impl Config {
         }
     }
 
+    /// Save config to file
     fn save(self) {
         let cfg_path = get_cfg_path();
         if let Some(parent) = cfg_path.parent() {
@@ -54,23 +57,26 @@ impl Config {
     }
 }
 
+/// Get config file path
 fn get_cfg_path() -> PathBuf {
     home::home_dir()
         .expect("no home directory found")
         .join(".config/vanilla-player/config.toml")
 }
 
-// ui --> backend
+/// Message in channel: ui --> backend
+/// Note: messages in the opposite direction (backend --> ui) are sent via slint::invoke_from_event_loop
 enum PlayerCommand {
-    Play(SongInfo),           // 从头播放某个音频文件
-    Pause,                    // 暂停/继续播放
-    ChangeProgress(f32),      // 拖拽进度条
-    PlayNext,                 // 播放下一首
-    PlayPrev,                 // 播放上一首
-    SwitchMode(PlayMode),     // 切换播放模式
-    RefreshSongList(PathBuf), // 刷新歌曲列表
+    Play(SongInfo, TriggerSource), // 从头播放某个音频文件
+    Pause,                         // 暂停/继续播放
+    ChangeProgress(f32),           // 拖拽进度条
+    PlayNext,                      // 播放下一首
+    PlayPrev,                      // 播放上一首
+    SwitchMode(PlayMode),          // 切换播放模式
+    RefreshSongList(PathBuf),      // 刷新歌曲列表
 }
 
+/// Scan songs in Path `p` and return a list of SongInfo
 fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
     let audio_dir = p.clone();
     if !audio_dir.exists() {
@@ -137,6 +143,7 @@ fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
         .collect()
 }
 
+/// Read lyrics from audio file `p`, return a list of LyricItem
 fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
     if let Ok(tagged) = lofty::read_from_path(&p) {
         if let Some(tag) = tagged.primary_tag() {
@@ -174,6 +181,7 @@ fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
     return Vec::new();
 }
 
+/// Read album cover from audio file `p`, return a slint::Image
 fn read_album_cover(p: PathBuf) -> slint::Image {
     if let Ok(tagged) = lofty::read_from_path(&p) {
         if let Some(tag) = tagged.primary_tag() {
@@ -196,6 +204,7 @@ fn read_album_cover(p: PathBuf) -> slint::Image {
     slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap()
 }
 
+/// Get about info string
 fn get_about_info() -> SharedString {
     format!(
         "{}\n\n{}\n\nauthor: {}\n\nversion: {}",
@@ -207,6 +216,7 @@ fn get_about_info() -> SharedString {
     .into()
 }
 
+/// Set UI state to default (no song)
 fn set_raw_ui_state(ui: &MainWindow) {
     let ui_state = ui.global::<UIState>();
     ui_state.set_progress(0.0);
@@ -233,6 +243,7 @@ fn set_raw_ui_state(ui: &MainWindow) {
     ui_state.set_lyric_viewport_y(0.);
 }
 
+/// Set UI state according to saved config
 fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     let ui_state = ui.global::<UIState>();
     let cfg = Config::load();
@@ -281,7 +292,7 @@ fn main() {
     thread::spawn(move || {
         while let Ok(cmd) = rx.recv() {
             match cmd {
-                PlayerCommand::Play(song_info) => {
+                PlayerCommand::Play(song_info, trigger) => {
                     let file = std::fs::File::open(&song_info.song_path).unwrap();
                     let source = Decoder::try_from(file).unwrap();
                     let lyrics = read_lyrics(song_info.song_path.as_str().into());
@@ -297,6 +308,36 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
+
+                            match trigger {
+                                TriggerSource::ClickItem => {
+                                    let mut history =
+                                        ui_state.get_play_history().iter().collect::<Vec<_>>();
+                                    history.push(song_info.clone());
+                                    ui_state.set_play_history(history.as_slice().into());
+                                    ui_state.set_history_index(0);
+                                }
+                                TriggerSource::Prev => {
+                                    let history =
+                                        ui_state.get_play_history().iter().collect::<Vec<_>>();
+                                    let new_index = ui_state.get_history_index() + 1;
+                                    ui_state
+                                        .set_history_index(new_index.min(history.len() as i32 - 1));
+                                }
+                                TriggerSource::Next => {
+                                    if ui_state.get_history_index() > 0 {
+                                        ui_state
+                                            .set_history_index(ui_state.get_history_index() - 1);
+                                    } else {
+                                        let mut history =
+                                            ui_state.get_play_history().iter().collect::<Vec<_>>();
+                                        history.push(song_info.clone());
+                                        ui_state.set_play_history(history.as_slice().into());
+                                        ui_state.set_history_index(0);
+                                    }
+                                }
+                            }
+
                             ui_state.set_current_song(song_info.clone());
                             ui_state.set_paused(false);
                             ui_state.set_progress(0.0);
@@ -307,6 +348,16 @@ fn main() {
                             ui_state.set_album_image(read_album_cover(
                                 song_info.song_path.as_str().into(),
                             ));
+
+                            println!(
+                                "{:?} / {}",
+                                ui_state
+                                    .get_play_history()
+                                    .iter()
+                                    .map(|x| x.id)
+                                    .collect::<Vec<_>>(),
+                                ui_state.get_history_index()
+                            );
                         }
                     })
                     .unwrap();
@@ -320,7 +371,7 @@ fn main() {
                             if let Some(ui) = ui_weak.upgrade() {
                                 let ui_state = ui.global::<UIState>();
                                 if let Some(song) = ui_state.get_song_list().iter().next() {
-                                    ui.invoke_play(song.clone());
+                                    ui.invoke_play(song.clone(), TriggerSource::ClickItem);
                                     ui_state.set_paused(false);
                                 }
                             }
@@ -365,22 +416,36 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-                            let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
-                            if !song_list.is_empty() {
-                                let mut rng = rand::rng();
-                                let next_id1 = rng.random_range(..song_list.len());
-                                let id = ui_state.get_current_song().id as usize;
-                                let mut next_id2 =
-                                    if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                                next_id2 = next_id2.min(song_list.len() - 1);
-                                let next_id = match ui_state.get_play_mode() {
-                                    PlayMode::InOrder => next_id2,
-                                    PlayMode::Random => next_id1,
-                                    PlayMode::Recursive => id,
-                                };
-                                if let Some(next_song) = song_list.get(next_id) {
-                                    let song_to_play = next_song.clone();
-                                    ui.invoke_play(song_to_play);
+                            // 如果处在历史播放模式，则先尝试从历史记录中获取下一首
+                            if ui_state.get_history_index() > 0 {
+                                let history =
+                                    ui_state.get_play_history().iter().collect::<Vec<_>>();
+                                if let Some(song) = history
+                                    .iter()
+                                    .rev()
+                                    .nth((ui_state.get_history_index() - 1) as usize)
+                                {
+                                    ui.invoke_play(song.clone(), TriggerSource::Next);
+                                }
+                            } else {
+                                // 否则根据播放模式获取下一首
+                                let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
+                                if !song_list.is_empty() {
+                                    let mut rng = rand::rng();
+                                    let next_id1 = rng.random_range(..song_list.len());
+                                    let id = ui_state.get_current_song().id as usize;
+                                    let mut next_id2 =
+                                        if id + 1 >= song_list.len() { 0 } else { id + 1 };
+                                    next_id2 = next_id2.min(song_list.len() - 1);
+                                    let next_id = match ui_state.get_play_mode() {
+                                        PlayMode::InOrder => next_id2,
+                                        PlayMode::Random => next_id1,
+                                        PlayMode::Recursive => id,
+                                    };
+                                    if let Some(next_song) = song_list.get(next_id) {
+                                        let song_to_play = next_song.clone();
+                                        ui.invoke_play(song_to_play.clone(), TriggerSource::Next);
+                                    }
                                 }
                             }
                         }
@@ -392,22 +457,16 @@ fn main() {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
-                            let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
-                            if !song_list.is_empty() {
-                                let mut rng = rand::rng();
-                                let next_id1 = rng.random_range(..song_list.len());
-                                let id = ui_state.get_current_song().id as usize;
-                                let mut next_id2 = if id as i32 - 1 < 0 { 0 } else { id - 1 };
-                                next_id2 = next_id2.min(song_list.len() - 1);
-                                let next_id = match ui_state.get_play_mode() {
-                                    PlayMode::InOrder => next_id2,
-                                    PlayMode::Random => next_id1,
-                                    PlayMode::Recursive => id,
-                                };
-                                if let Some(next_song) = song_list.get(next_id) {
-                                    let song_to_play = next_song.clone();
-                                    ui.invoke_play(song_to_play);
-                                }
+                            let cur_song = ui_state.get_current_song();
+                            let history = ui_state.get_play_history().iter().collect::<Vec<_>>();
+                            if let Some(song) = history
+                                .iter()
+                                .rev()
+                                .nth((ui_state.get_history_index() + 1) as usize)
+                            {
+                                ui.invoke_play(song.clone(), TriggerSource::Prev);
+                            } else {
+                                ui.invoke_play(cur_song, TriggerSource::Prev);
                             }
                         }
                     })
@@ -432,7 +491,7 @@ fn main() {
                             let ui_state = ui.global::<UIState>();
                             ui_state.set_song_list(new_list.as_slice().into());
                             if let Some(first_song) = new_list.first() {
-                                ui.invoke_play(first_song.clone());
+                                ui.invoke_play(first_song.clone(), TriggerSource::ClickItem);
                             } else {
                                 let sink_guard = sink_clone.lock().unwrap();
                                 sink_guard.clear();
@@ -449,8 +508,8 @@ fn main() {
     // UI 触发事件
     {
         let tx = tx.clone();
-        ui.on_play(move |song_info: SongInfo| {
-            tx.send(PlayerCommand::Play(song_info)).unwrap();
+        ui.on_play(move |song_info: SongInfo, trigger: TriggerSource| {
+            tx.send(PlayerCommand::Play(song_info, trigger)).unwrap();
         });
     }
     {
