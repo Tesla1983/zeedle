@@ -166,10 +166,14 @@ fn main() {
                                         ui_state
                                             .set_history_index(ui_state.get_history_index() - 1);
                                     } else {
-                                        let mut history =
-                                            ui_state.get_play_history().iter().collect::<Vec<_>>();
-                                        history.push(song_info.clone());
-                                        ui_state.set_play_history(history.as_slice().into());
+                                        if ui_state.get_play_mode() != PlayMode::Recursive {
+                                            let mut history = ui_state
+                                                .get_play_history()
+                                                .iter()
+                                                .collect::<Vec<_>>();
+                                            history.push(song_info.clone());
+                                            ui_state.set_play_history(history.as_slice().into());
+                                        }
                                         ui_state.set_history_index(0);
                                     }
                                 }
