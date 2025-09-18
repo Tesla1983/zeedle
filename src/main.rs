@@ -218,6 +218,8 @@ fn main() {
                                 if let Some(song) = ui_state.get_song_list().iter().next() {
                                     ui.invoke_play(song.clone(), TriggerSource::ClickItem);
                                     ui_state.set_paused(false);
+                                } else {
+                                    log::warn!("song list is empty, can't play");
                                 }
                             }
                         })
@@ -280,24 +282,26 @@ fn main() {
                                 // 否则根据播放模式获取下一首
                                 log::info!("playing next from play mode");
                                 let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
-                                if !song_list.is_empty() {
-                                    let mut rng = rand::rng();
-                                    let next_id1 = rng.random_range(..song_list.len());
-                                    let id = ui_state.get_current_song().id as usize;
-                                    let mut next_id2 =
-                                        if id + 1 >= song_list.len() { 0 } else { id + 1 };
-                                    next_id2 = next_id2.min(song_list.len() - 1);
-                                    let next_id = match ui_state.get_play_mode() {
-                                        PlayMode::InOrder => next_id2,
-                                        PlayMode::Random => next_id1,
-                                        PlayMode::Recursive => id,
-                                    };
-                                    if let Some(next_song) = song_list.get(next_id) {
-                                        let song_to_play = next_song.clone();
-                                        ui.invoke_play(song_to_play.clone(), TriggerSource::Next);
-                                    } else {
-                                        log::warn!("failed to play next from play mode");
-                                    }
+                                if song_list.is_empty() {
+                                    log::warn!("song list is empty, can't play next");
+                                    return;
+                                }
+                                let mut rng = rand::rng();
+                                let next_id1 = rng.random_range(..song_list.len());
+                                let id = ui_state.get_current_song().id as usize;
+                                let mut next_id2 =
+                                    if id + 1 >= song_list.len() { 0 } else { id + 1 };
+                                next_id2 = next_id2.min(song_list.len() - 1);
+                                let next_id = match ui_state.get_play_mode() {
+                                    PlayMode::InOrder => next_id2,
+                                    PlayMode::Random => next_id1,
+                                    PlayMode::Recursive => id,
+                                };
+                                if let Some(next_song) = song_list.get(next_id) {
+                                    let song_to_play = next_song.clone();
+                                    ui.invoke_play(song_to_play.clone(), TriggerSource::Next);
+                                } else {
+                                    log::warn!("failed to play next from play mode");
                                 }
                             }
                         }
@@ -305,11 +309,16 @@ fn main() {
                     .unwrap();
                 }
                 PlayerCommand::PlayPrev => {
-                    let ui_weak = ui_weak.clone();
+                    let ui_weak: slint::Weak<MainWindow> = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             let cur_song = ui_state.get_current_song();
+                            let song_list: Vec<_> = ui_state.get_song_list().iter().collect();
+                            if song_list.is_empty() {
+                                log::warn!("song list is empty, can't play prev");
+                                return;
+                            }
                             let history = ui_state.get_play_history().iter().collect::<Vec<_>>();
                             if let Some(song) = history
                                 .iter()
