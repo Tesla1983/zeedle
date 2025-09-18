@@ -5051,7 +5051,7 @@ dependencies = [
 
 [[package]]
 name = "vanilla-player"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "chrono",
  "env_logger",
