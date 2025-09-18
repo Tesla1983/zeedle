@@ -92,6 +92,10 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
         sink.pause();
         sink.try_seek(Duration::from_secs_f32(cfg.progress))
             .expect("failed to seek to given position");
+        let mut history = ui_state.get_play_history().iter().collect::<Vec<_>>();
+        history.push(song_info.clone());
+        ui_state.set_play_history(history.as_slice().into());
+        ui_state.set_history_index(0);
     }
 }
 
