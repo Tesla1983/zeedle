@@ -274,7 +274,11 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
 }
 
 fn main() {
-    let ui = MainWindow::new().unwrap();
+    let ins = single_instance::SingleInstance::new("Vanilla Player").unwrap();
+    if !ins.is_single() {
+        println!("程序已经在运行！");
+        return;
+    }
     let mut stream_handle = rodio::OutputStreamBuilder::from_default_device()
         .expect("no output device available")
         .with_buffer_size(cpal::BufferSize::Fixed(4096))
@@ -283,7 +287,10 @@ fn main() {
     stream_handle.log_on_drop(false);
     let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
     let sink = Arc::new(Mutex::new(_sink));
+    // 创建消息通道 ui --> backend
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
+    // 初始化 UI 状态
+    let ui = MainWindow::new().unwrap();
     set_start_ui_state(&ui, &sink.lock().unwrap());
 
     // 播放线程
