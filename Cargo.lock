@@ -3,6 +3,28 @@
 version = 4
 
 [[package]]
+name = "Zeedle"
+version = "0.1.9"
+dependencies = [
+ "chrono",
+ "env_logger",
+ "glob",
+ "home",
+ "image",
+ "lofty",
+ "log",
+ "rand 0.9.2",
+ "rodio",
+ "serde",
+ "single-instance",
+ "slint",
+ "slint-build",
+ "sysinfo",
+ "toml 0.9.5",
+ "winresource",
+]
+
+[[package]]
 name = "ab_glyph"
 version = "0.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5047,28 +5069,6 @@ dependencies = [
  "aligned-vec",
  "num-traits",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "vanilla-player"
-version = "0.1.9"
-dependencies = [
- "chrono",
- "env_logger",
- "glob",
- "home",
- "image",
- "lofty",
- "log",
- "rand 0.9.2",
- "rodio",
- "serde",
- "single-instance",
- "slint",
- "slint-build",
- "sysinfo",
- "toml 0.9.5",
- "winresource",
 ]
 
 [[package]]

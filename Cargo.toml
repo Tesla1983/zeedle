@@ -1,9 +1,8 @@
 [package]
-name = "vanilla-player"
+name = "Zeedle"
 version = "0.1.9"
 edition = "2024"
 authors = ["Jiadong He"]
-description = "A local music player built with Rodio and Slint UI"
 
 [dependencies]
 chrono = "0.4.42"
