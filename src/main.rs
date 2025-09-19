@@ -245,6 +245,7 @@ fn main() {
                             if let Some(ui) = ui_weak.upgrade() {
                                 let ui_state = ui.global::<UIState>();
                                 ui_state.set_paused(!paused);
+                                ui_state.set_user_listening(true);
                             }
                         })
                         .unwrap();
