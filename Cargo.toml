@@ -2,7 +2,7 @@
 name = "Zeedle"
 version = "0.1.9"
 edition = "2024"
-authors = ["Jiadong He"]
+authors = ["Jordan Haidee"]
 
 [dependencies]
 chrono = "0.4.42"
@@ -36,9 +36,9 @@ sysinfo = "0.37.0"
 product-name = "Zeedle"
 before-packaging-command = "cargo build --release"
 resources = ["DLLs/*.dll"]
-authors = ["Jiadong He"]
-identifier = "he.jiadong.Zeedle"
-copyright = "Copyright © 2025 Jiadong He. All rights reserved."
+authors = ["Jordan Haidee"]
+identifier = "dev.zeedle"
+copyright = "Copyright © 2025 Zeedle Dev. All rights reserved."
 
 [package.metadata.packager.nsis]
 installer-icon = "ui/cover.ico"
