@@ -6,7 +6,7 @@
 <p align="center"> 
     <b>Zeedle</b></br>
     Music at the speed of a blink, designed for pure simplicity</br>
-    Built by <a href="https://github.com/RustAudio/rodio">Rodio</a> and <a href="https://slint.dev">Slint UI</a>.
+    Built by <a href="https://github.com/RustAudio/rodio">Rodio</a> and <a href="https://slint.dev">Slint UI</a>
 </p>
 
 Enjoy your music in less than 0.5s:
