@@ -53,7 +53,8 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
     }
 
     let max_length = 17;
-    list.into_iter()
+    let mut list2 = list
+        .into_iter()
         .map(|mut x| {
             let singer_chars = x.singer.chars().collect::<Vec<char>>();
             if singer_chars.len() > max_length {
@@ -73,7 +74,9 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
             }
             return x;
         })
-        .collect()
+        .collect::<Vec<_>>();
+    list2.sort_by(|a, b| a.song_name.cmp(&b.song_name));
+    list2
 }
 
 /// Read lyrics from audio file `p`, return a list of LyricItem
