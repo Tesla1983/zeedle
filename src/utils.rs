@@ -26,7 +26,7 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
                 let dura = tagged.properties().duration().as_secs_f32();
                 if let Some(tag) = tagged.primary_tag() {
                     let item = SongInfo {
-                        id: list.len() as i32,
+                        id: 0,
                         song_path: p.display().to_shared_string(),
                         song_name: tag
                             .title()
@@ -52,10 +52,11 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
         }
     }
 
+    list.sort_by(|a, b| a.song_name.cmp(&b.song_name));
     let max_length = 17;
-    let mut list2 = list
-        .into_iter()
-        .map(|mut x| {
+    list.into_iter()
+        .enumerate()
+        .map(|(idx, mut x)| {
             let singer_chars = x.singer.chars().collect::<Vec<char>>();
             if singer_chars.len() > max_length {
                 x.singer = format!(
@@ -72,11 +73,10 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
                 )
                 .into();
             }
+            x.id = idx as i32;
             return x;
         })
-        .collect::<Vec<_>>();
-    list2.sort_by(|a, b| a.song_name.cmp(&b.song_name));
-    list2
+        .collect::<Vec<_>>()
 }
 
 /// Read lyrics from audio file `p`, return a list of LyricItem
