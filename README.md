@@ -6,13 +6,15 @@
 <p align="center"> 
     <b>Zeedle</b></br>
     Music at the speed of a blink, designed for pure simplicity</br>
-    Built by <a href="https://github.com/RustAudio/rodio">Rodio</a> and <a href="https://slint.dev">Slint UI</a>
+    Built by <a href="https://github.com/RustAudio/rodio">Rodio</a> and <a href="https://slint.dev">Slint UI</a></br>
 </p>
 
 Enjoy your music in less than 0.5s:
 - ⚡ Instant startup — your music begins the moment you click.
 - 🎶 Local focus — lightweight and distraction-free.
 - ✨ Minimal Dark UI — nothing but your music, beautifully clear.
+
+<a href="README-zh.md">中文介绍</a> can be seen here.
 
 ## Installation
 ### Windows
