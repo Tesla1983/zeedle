@@ -84,7 +84,12 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
                 .as_slice()
                 .into(),
         );
-        ui_state.set_album_image(utils::read_album_cover(song_info.song_path.as_str().into()));
+        let cover = utils::read_album_cover(song_info.song_path.as_str().into());
+        let cover = match cover {
+            Some((buffer, width, height)) => utils::from_image_to_slint(buffer, width, height),
+            None => utils::get_default_album_cover(),
+        };
+        ui_state.set_album_image(cover);
         let file = std::fs::File::open(&song_info.song_path)
             .expect(format!("failed to open audio file: {}", song_info.song_path).as_str());
         let source = Decoder::try_from(file).expect("failed to decode audio file");
@@ -146,6 +151,7 @@ fn main() {
                     sink_guard.append(source);
                     sink_guard.play();
                     log::info!("start playing: <{}>", song_info.song_name);
+                    let cover = utils::read_album_cover(song_info.song_path.as_str().into());
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
@@ -190,9 +196,13 @@ fn main() {
                             ui_state.set_user_listening(true);
                             ui_state.set_lyrics(lyrics.as_slice().into());
                             ui_state.set_lyric_viewport_y(0.);
-                            ui_state.set_album_image(utils::read_album_cover(
-                                song_info.song_path.as_str().into(),
-                            ));
+                            let cover = match cover {
+                                Some((buffer, width, height)) => {
+                                    utils::from_image_to_slint(buffer, width, height)
+                                }
+                                None => utils::get_default_album_cover(),
+                            };
+                            ui_state.set_album_image(cover);
 
                             log::debug!(
                                 "{:?} / {}",

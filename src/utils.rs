@@ -115,7 +115,7 @@ pub fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
 }
 
 /// Read album cover from audio file `p`, return a slint::Image
-pub fn read_album_cover(p: PathBuf) -> slint::Image {
+pub fn read_album_cover(p: PathBuf) -> Option<(Vec<u8>, u32, u32)> {
     if let Ok(tagged) = lofty::read_from_path(&p) {
         if let Some(tag) = tagged.primary_tag() {
             if let Some(picture) = tag.pictures().iter().find(|pic| {
@@ -126,14 +126,22 @@ pub fn read_album_cover(p: PathBuf) -> slint::Image {
                     let rgba = img.into_rgba8();
                     let (width, height) = rgba.dimensions();
                     let buffer = rgba.into_vec();
-                    let mut pixel_buffer = slint::SharedPixelBuffer::new(width, height);
-                    let pixel_buffer_data = pixel_buffer.make_mut_bytes();
-                    pixel_buffer_data.copy_from_slice(&buffer);
-                    return slint::Image::from_rgba8(pixel_buffer);
+                    return Some((buffer, width, height));
                 }
             }
         }
     }
+    None
+}
+
+pub fn from_image_to_slint(buffer: Vec<u8>, width: u32, height: u32) -> slint::Image {
+    let mut pixel_buffer = slint::SharedPixelBuffer::new(width, height);
+    let pixel_buffer_data = pixel_buffer.make_mut_bytes();
+    pixel_buffer_data.copy_from_slice(&buffer);
+    return slint::Image::from_rgba8(pixel_buffer);
+}
+
+pub fn get_default_album_cover() -> slint::Image {
     slint::Image::load_from_svg_data(include_bytes!("../ui/cover.svg")).unwrap()
 }
 
