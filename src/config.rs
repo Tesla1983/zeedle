@@ -6,7 +6,7 @@ use crate::slint_types::PlayMode;
 fn get_cfg_path() -> PathBuf {
     home::home_dir()
         .expect("no home directory found")
-        .join(".config/vanilla-player/config.toml")
+        .join(".config/zeedle/config.toml")
 }
 
 /// Used to save/recover ui state
