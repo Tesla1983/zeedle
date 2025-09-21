@@ -1,6 +1,6 @@
 import { ListView, Slider, TabWidget, StandardListView, LineEdit } from "std-widgets.slint";
 import { NextSongButton, PrevSongButton, PlayPauseButton, OverlapButton, RandomButton, PlayMode } from "button.slint";
-import { SongInfo, TitleBar, SongItem } from "song.slint";
+import { SongInfo, TitleBar, SongItem, SortKey } from "song.slint";
 import { LyricLine } from "lyric.slint";
 
 
@@ -54,6 +54,11 @@ export global UIState {
     in property <[SongInfo]> play_history;
     // 播放历史索引
     in property <int> history_index: 0;
+    // 歌曲排序方式
+    in-out property <SortKey> sort_key;
+    in-out property <SortKey> last_sort_key;
+    // 升序/降序
+    in-out property <bool> sort_ascending: true;
 }
 
 export component MainWindow inherits Window {
@@ -71,11 +76,22 @@ export component MainWindow inherits Window {
     callback change_progress(float);
     callback switch_mode(PlayMode);
     callback refresh_song_list(string);
+    callback sort_song_list(SortKey, bool);
     tabs := TabWidget {
         Tab {
             title: "歌曲列表";
             VerticalLayout {
-                TitleBar { }
+                TitleBar {
+                    ascending: UIState.sort_ascending;
+                    key: UIState.sort_key;
+                    sort-items(key, ascending) => {
+                        if (UIState.last_sort_key == key) {
+                            root.sort_song_list(key, !ascending);
+                        } else {
+                            root.sort_song_list(key, true)
+                        }
+                    }
+                }
 
                 ListView {
                     height: 80%;

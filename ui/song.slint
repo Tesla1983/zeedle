@@ -6,35 +6,133 @@ export struct SongInfo {
     song_path:string,
 }
 
+export enum SortKey {
+    BySongName,
+    BySinger,
+    ByDuration,
+}
+
+component SortIcon inherits Window {
+    in-out property <bool> ascending:true;
+    in-out property <bool> display:true;
+    height: 15px;
+    width: 15px;
+    background: transparent;
+    if !ascending && display: Path {
+        MoveTo {
+            x: 5;
+            y: 1;
+        }
+
+        LineTo {
+            x: 5;
+            y: 9;
+        }
+
+        LineTo {
+            x: 7;
+            y: 7;
+        }
+
+        stroke: gray;
+        stroke-width: 1px;
+    }
+    if ascending && display:
+        Path {
+        MoveTo {
+            x: 5;
+            y: 9;
+        }
+
+        LineTo {
+            x: 5;
+            y: 1;
+        }
+
+        LineTo {
+            x: 3;
+            y: 3;
+        }
+
+        stroke: gray;
+        stroke-width: 1px;
+    }
+}
+
+component TitleBarItem inherits Window {
+    in property <string> name:"name";
+    in-out property <bool> display-sort-icon <=> arrow.display;
+    in-out property <bool> ascending-sort <=> arrow.ascending;
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        text := Text {
+            text: name;
+            color: dimgray;
+            x: parent.width * 0.4;
+            y: parent.height / 2 - self.height / 2;
+        }
+
+        arrow := SortIcon {
+            ascending: true;
+            width: 12px;
+            height: 12px;
+            x: text.x + text.width + 5px;
+            y: parent.height / 2 - self.height / 2;
+        }
+    }
+}
+
 export component TitleBar inherits Window {
     height: 30px;
+    in-out property <SortKey> key;
+    in-out property <bool> ascending;
+    callback sort-items(SortKey, bool);
     VerticalLayout {
         HorizontalLayout {
             alignment: space-between;
-            Rectangle {
+            area1 := TouchArea {
                 width: 33%;
-                Text {
-                    x: parent.width * 0.4;
-                    text: "歌曲";
-                    color: dimgray;
+                clicked => {
+                    sort-items(SortKey.BySongName, ascending);
+                }
+                TitleBarItem {
+                    width: 100%;
+                    height: 100%;
+                    name: "歌曲";
+                    background: area1.has-hover ? rgb(40, 40, 40) : transparent;
+                    display-sort-icon: key == SortKey.BySongName;
+                    ascending-sort: ascending;
                 }
             }
 
-            Rectangle {
+            area2 := TouchArea {
                 width: 33%;
-                Text {
-                    x: parent.width * 0.4;
-                    text: "歌手";
-                    color: dimgray;
+                clicked => {
+                    sort-items(SortKey.BySinger, ascending);
+                }
+                TitleBarItem {
+                    name: "歌手";
+                    height: 100%;
+                    width: 100%;
+                    background: area2.has-hover ? rgb(40, 40, 40) : transparent;
+                    display-sort-icon: key == SortKey.BySinger;
+                    ascending-sort: ascending;
                 }
             }
 
-            Rectangle {
+            area3 := TouchArea {
                 width: 33%;
-                Text {
-                    x: parent.width * 0.4;
-                    text: "时间";
-                    color: dimgray;
+                clicked => {
+                    sort-items(SortKey.ByDuration, ascending);
+                }
+                TitleBarItem {
+                    name: "时长";
+                    height: 100%;
+                    width: 100%;
+                    background: area3.has-hover ? rgb(40, 40, 40) : transparent;
+                    display-sort-icon: key == SortKey.ByDuration;
+                    ascending-sort: ascending;
                 }
             }
         }

@@ -1,7 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use rand::Rng;
+use rayon::slice::ParallelSliceMut;
 use rodio::{Decoder, Source, cpal};
 use slint::{Model, ToSharedString};
+use std::cmp::Reverse;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
@@ -23,6 +25,7 @@ enum PlayerCommand {
     PlayPrev,                      // 播放上一首
     SwitchMode(PlayMode),          // 切换播放模式
     RefreshSongList(PathBuf),      // 刷新歌曲列表
+    SortSongList(SortKey, bool),   // 刷新歌曲列表
 }
 
 /// Set UI state to default (no song)
@@ -377,6 +380,53 @@ fn main() {
                     })
                     .unwrap();
                 }
+                PlayerCommand::SortSongList(key, ascending) => {
+                    let ui_weak = ui_weak.clone();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let ui_state = ui.global::<UIState>();
+                            let mut song_list: Vec<_> = ui_state.get_song_list().iter().collect();
+                            match key {
+                                SortKey::BySongName => {
+                                    if ascending {
+                                        song_list.par_sort_by_key(|a| a.song_name.clone());
+                                    } else {
+                                        song_list.par_sort_by_key(|a| Reverse(a.song_name.clone()));
+                                    }
+                                }
+                                SortKey::BySinger => {
+                                    if ascending {
+                                        song_list.par_sort_by_key(|a| a.singer.clone());
+                                    } else {
+                                        song_list.par_sort_by_key(|a| Reverse(a.singer.clone()));
+                                    }
+                                }
+                                SortKey::ByDuration => {
+                                    if ascending {
+                                        song_list.par_sort_by_key(|a| a.duration.clone());
+                                    } else {
+                                        song_list.par_sort_by_key(|a| Reverse(a.duration.clone()));
+                                    }
+                                }
+                            }
+                            song_list
+                                .iter_mut()
+                                .enumerate()
+                                .for_each(|(i, x)| x.id = i as i32);
+                            let new_cur_song = song_list
+                                .iter()
+                                .find(|x| x.song_path == ui_state.get_current_song().song_path)
+                                .unwrap();
+                            ui_state.set_current_song(new_cur_song.clone());
+                            ui_state.set_sort_key(key);
+                            ui_state.set_sort_ascending(ascending);
+                            ui_state.set_last_sort_key(key);
+                            ui_state.set_song_list(song_list.as_slice().into());
+                            log::info!("song list sorted by <{:?}>, ascending: {}", key, ascending);
+                        }
+                    })
+                    .unwrap();
+                }
             }
         }
     });
@@ -440,6 +490,18 @@ fn main() {
             log::info!("request to refresh song list from: {:?}", path);
             tx.send(PlayerCommand::RefreshSongList(path.as_str().into()))
                 .expect("failed to send refresh song list command");
+        });
+    }
+    {
+        let tx = tx.clone();
+        ui.on_sort_song_list(move |key, ascending| {
+            log::info!(
+                "request to sort song list by: {:?}, ascending: {}",
+                key,
+                ascending
+            );
+            tx.send(PlayerCommand::SortSongList(key, ascending))
+                .expect("failed to send sort song list command");
         });
     }
 
