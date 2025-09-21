@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::slint_types::PlayMode;
+use crate::slint_types::{PlayMode, SortKey};
 
 /// Get config file path
 fn get_cfg_path() -> PathBuf {
@@ -17,6 +17,8 @@ pub struct Config {
     pub progress: f32,
     pub duration: f32,
     pub play_mode: PlayMode,
+    pub sort_key: SortKey,
+    pub sort_ascending: bool,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -28,6 +30,8 @@ impl Default for Config {
             progress: 0.0,
             duration: 0.0,
             play_mode: PlayMode::InOrder,
+            sort_key: SortKey::BySongName,
+            sort_ascending: true,
         }
     }
 }

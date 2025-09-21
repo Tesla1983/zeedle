@@ -6,6 +6,7 @@ export struct SongInfo {
     song_path:string,
 }
 
+@rust-attr(derive(serde::Serialize, serde::Deserialize))
 export enum SortKey {
     BySongName,
     BySinger,

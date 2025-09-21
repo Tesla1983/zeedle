@@ -66,7 +66,9 @@ fn set_raw_ui_state(ui: &MainWindow) {
 fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     let ui_state = ui.global::<UIState>();
     let cfg = Config::load();
-    let song_list = utils::read_song_list(cfg.song_dir.clone());
+    let song_list = utils::read_song_list(cfg.song_dir.clone(), cfg.sort_key, cfg.sort_ascending);
+    ui_state.set_sort_key(cfg.sort_key);
+    ui_state.set_sort_ascending(cfg.sort_ascending);
     ui_state.set_progress(cfg.progress);
     ui_state.set_duration(cfg.duration);
     ui_state.set_paused(true);
@@ -361,13 +363,15 @@ fn main() {
                     .unwrap();
                 }
                 PlayerCommand::RefreshSongList(path) => {
-                    let new_list = utils::read_song_list(path.clone());
+                    let new_list = utils::read_song_list(path.clone(), SortKey::BySongName, true);
                     let ui_weak = ui_weak.clone();
                     let sink_clone = sink_clone.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             ui_state.set_song_list(new_list.as_slice().into());
+                            ui_state.set_sort_key(SortKey::BySongName);
+                            ui_state.set_sort_ascending(true);
                             if let Some(first_song) = new_list.first() {
                                 ui.invoke_play(first_song.clone(), TriggerSource::ClickItem);
                             } else {
@@ -386,6 +390,10 @@ fn main() {
                         if let Some(ui) = ui_weak.upgrade() {
                             let ui_state = ui.global::<UIState>();
                             let mut song_list: Vec<_> = ui_state.get_song_list().iter().collect();
+                            if song_list.is_empty() {
+                                log::warn!("song list is empty, can't sort");
+                                return;
+                            }
                             match key {
                                 SortKey::BySongName => {
                                     if ascending {
@@ -569,6 +577,8 @@ fn main() {
             progress: ui_state.get_progress(),
             duration: ui_state.get_duration(),
             play_mode: ui_state.get_play_mode(),
+            sort_key: ui_state.get_sort_key(),
+            sort_ascending: ui_state.get_sort_ascending(),
         }
     });
     log::info!("app exited");

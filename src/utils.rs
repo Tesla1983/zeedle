@@ -1,4 +1,4 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 use globset::GlobBuilder;
 use lofty::{
@@ -13,10 +13,10 @@ use rayon::{
 use slint::{SharedString, ToSharedString};
 use walkdir::WalkDir;
 
-use crate::slint_types::{LyricItem, SongInfo};
+use crate::slint_types::{LyricItem, SongInfo, SortKey};
 
 /// Scan songs in Path `p` and return a list of SongInfo
-pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
+pub fn read_song_list(p: PathBuf, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
     let audio_dir = p.clone();
     if !audio_dir.exists() {
         return Vec::new();
@@ -84,7 +84,19 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
             return x;
         })
         .collect::<Vec<_>>();
-    songs.par_sort_by_key(|x| x.song_name.clone());
+    if ascending {
+        songs.par_sort_by_key(|x| match sort_key {
+            SortKey::BySongName => x.song_name.clone(),
+            SortKey::BySinger => x.singer.clone(),
+            SortKey::ByDuration => x.duration.clone(),
+        });
+    } else {
+        songs.par_sort_by_key(|x| match sort_key {
+            SortKey::BySongName => std::cmp::Reverse(x.song_name.clone()),
+            SortKey::BySinger => std::cmp::Reverse(x.singer.clone()),
+            SortKey::ByDuration => std::cmp::Reverse(x.duration.clone()),
+        });
+    }
     songs
         .into_par_iter()
         .enumerate()
