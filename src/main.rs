@@ -5,7 +5,7 @@ use slint::{Model, ToSharedString};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 mod slint_types;
 use slint_types::*;
 mod config;
@@ -105,6 +105,7 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
 }
 
 fn main() {
+    let app_start = Instant::now();
     logger::init_default_logger();
     // when panics happen, auto port errors to log
     std::panic::set_hook(Box::new(|info| {
@@ -128,7 +129,6 @@ fn main() {
     // 初始化 UI 状态
     let ui = MainWindow::new().expect("failed to create UI");
     set_start_ui_state(&ui, &sink.lock().unwrap());
-    log::info!("ui state initialized");
 
     // 播放线程
     let ui_weak = ui.as_weak();
@@ -494,6 +494,7 @@ fn main() {
     );
 
     // 显示 UI
+    log::info!("ui state initialized, take: {:?}", app_start.elapsed());
     ui.run().expect("failed to run UI");
 
     // 退出前保存状态

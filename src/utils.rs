@@ -1,11 +1,17 @@
-use std::path::PathBuf;
+use std::{path::PathBuf};
 
+use globset::GlobBuilder;
 use lofty::{
     file::{AudioFile, TaggedFileExt},
     picture::PictureType,
     tag::{Accessor, ItemKey},
 };
+use rayon::{
+    iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
+    slice::ParallelSliceMut,
+};
 use slint::{SharedString, ToSharedString};
+use walkdir::WalkDir;
 
 use crate::slint_types::{LyricItem, SongInfo};
 
@@ -15,19 +21,25 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
     if !audio_dir.exists() {
         return Vec::new();
     }
-    let mut list = Vec::new();
-    for entry in glob::glob(audio_dir.join("*.flac").to_str().unwrap())
+    let glober = GlobBuilder::new("**/*.{mp3,flac,wav,ogg}")
+        .build()
         .unwrap()
-        .chain(glob::glob(audio_dir.join("*.mp3").to_str().unwrap()).unwrap())
-        .chain(glob::glob(audio_dir.join("*.wav").to_str().unwrap()).unwrap())
-    {
-        if let Ok(p) = entry {
-            if let Ok(tagged) = lofty::read_from_path(&p) {
+        .compile_matcher();
+    let entries = WalkDir::new(audio_dir)
+        .into_iter()
+        .filter_map(|x| x.ok())
+        .filter(|x| glober.is_match(x.path()))
+        .collect::<Vec<_>>();
+    let max_length = 17;
+    let mut songs = entries
+        .into_par_iter()
+        .map(|entry| {
+            if let Ok(tagged) = lofty::read_from_path(&entry.path()) {
                 let dura = tagged.properties().duration().as_secs_f32();
                 if let Some(tag) = tagged.primary_tag() {
                     let item = SongInfo {
                         id: 0,
-                        song_path: p.display().to_shared_string(),
+                        song_path: entry.path().display().to_shared_string(),
                         song_name: tag
                             .title()
                             .as_deref()
@@ -46,17 +58,13 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
                         duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
                             .to_shared_string(),
                     };
-                    list.push(item);
+                    return Some(item);
                 }
             }
-        }
-    }
-
-    list.sort_by(|a, b| a.song_name.cmp(&b.song_name));
-    let max_length = 17;
-    list.into_iter()
-        .enumerate()
-        .map(|(idx, mut x)| {
+            None
+        })
+        .flatten()
+        .map(|mut x| {
             let singer_chars = x.singer.chars().collect::<Vec<char>>();
             if singer_chars.len() > max_length {
                 x.singer = format!(
@@ -73,8 +81,16 @@ pub fn read_song_list(p: PathBuf) -> Vec<SongInfo> {
                 )
                 .into();
             }
-            x.id = idx as i32;
             return x;
+        })
+        .collect::<Vec<_>>();
+    songs.par_sort_by_key(|x| x.song_name.clone());
+    songs
+        .into_par_iter()
+        .enumerate()
+        .map(|(idx, mut x)| {
+            x.id = idx as i32;
+            x
         })
         .collect::<Vec<_>>()
 }
@@ -151,7 +167,7 @@ pub fn get_default_album_cover() -> slint::Image {
 /// Get about info string
 pub fn get_about_info() -> SharedString {
     format!(
-        "{}\n\n{}\n\nauthor: {}\n\nversion: {}",
+        "{}\n{}\nAuthor: {}\nVersion: {}",
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_DESCRIPTION"),
         env!("CARGO_PKG_AUTHORS"),
