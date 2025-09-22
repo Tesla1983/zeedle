@@ -11,13 +11,61 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 use slint::{SharedString, ToSharedString};
+use unicode_width::UnicodeWidthChar;
 use walkdir::WalkDir;
 
 use crate::slint_types::{LyricItem, SongInfo, SortKey};
 
+fn truncate_by_width(s: &str, max_width: usize) -> String {
+    let mut width = 0;
+    let mut result = String::new();
+
+    for c in s.chars() {
+        let w = UnicodeWidthChar::width(c).unwrap_or(0);
+        if width + w > max_width {
+            result.push_str("...");
+            return result;
+        }
+        width += w;
+        result.push(c);
+    }
+
+    result
+}
+
+/// Read meta info from audio file `fp`, return a SongInfo
+fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
+    if let Ok(tagged) = lofty::read_from_path(fp) {
+        let dura = tagged.properties().duration().as_secs_f32();
+        if let Some(tag) = tagged.primary_tag() {
+            let song_name = tag.title();
+            let song_name = song_name.as_deref().unwrap_or(
+                fp.file_stem()
+                    .map(|x| x.to_str())
+                    .flatten()
+                    .unwrap_or("unknown"),
+            );
+            let song_name = truncate_by_width(song_name, 24);
+            let singer_name = tag.artist();
+            let singer_name = singer_name.as_deref().unwrap_or("unknown");
+            let singer_name = truncate_by_width(singer_name, 24);
+
+            let item = SongInfo {
+                id: 0,
+                song_path: fp.display().to_shared_string(),
+                song_name: song_name.into(),
+                singer: singer_name.into(),
+                duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
+                    .to_shared_string(),
+            };
+            return Some(item);
+        }
+    }
+    None
+}
+
 /// Scan songs in Path `p` and return a list of SongInfo
-pub fn read_song_list(p: PathBuf, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
-    let audio_dir = p.clone();
+pub fn read_song_list(audio_dir: PathBuf, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
     if !audio_dir.exists() {
         return Vec::new();
     }
@@ -30,59 +78,10 @@ pub fn read_song_list(p: PathBuf, sort_key: SortKey, ascending: bool) -> Vec<Son
         .filter_map(|x| x.ok())
         .filter(|x| glober.is_match(x.path()))
         .collect::<Vec<_>>();
-    let max_length = 17;
     let mut songs = entries
         .into_par_iter()
-        .map(|entry| {
-            if let Ok(tagged) = lofty::read_from_path(&entry.path()) {
-                let dura = tagged.properties().duration().as_secs_f32();
-                if let Some(tag) = tagged.primary_tag() {
-                    let item = SongInfo {
-                        id: 0,
-                        song_path: entry.path().display().to_shared_string(),
-                        song_name: tag
-                            .title()
-                            .as_deref()
-                            .unwrap_or(
-                                p.file_stem()
-                                    .map(|x| x.to_str())
-                                    .flatten()
-                                    .unwrap_or("unknown"),
-                            )
-                            .to_shared_string(),
-                        singer: tag
-                            .artist()
-                            .as_deref()
-                            .unwrap_or("unknown")
-                            .to_shared_string(),
-                        duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
-                            .to_shared_string(),
-                    };
-                    return Some(item);
-                }
-            }
-            None
-        })
+        .map(|entry| read_meta_info(&entry.path().to_path_buf()))
         .flatten()
-        .map(|mut x| {
-            let singer_chars = x.singer.chars().collect::<Vec<char>>();
-            if singer_chars.len() > max_length {
-                x.singer = format!(
-                    "{}...",
-                    singer_chars[..max_length].iter().collect::<String>()
-                )
-                .into();
-            }
-            let song_name_chars = x.song_name.chars().collect::<Vec<char>>();
-            if song_name_chars.len() > max_length {
-                x.song_name = format!(
-                    "{}...",
-                    song_name_chars[..max_length].iter().collect::<String>()
-                )
-                .into();
-            }
-            return x;
-        })
         .collect::<Vec<_>>();
     if ascending {
         songs.par_sort_by_key(|x| match sort_key {
