@@ -112,6 +112,7 @@ export component MainWindow inherits Window {
                     released(v) => {
                         UIState.dragging = false;
                         change_progress(v);
+                        root.focus();
                     }
                     changed(_) => {
                         UIState.dragging = true;
@@ -333,20 +334,27 @@ export component MainWindow inherits Window {
         key-released(event) => {
             if event.text == Key.Space {
                 root.toggle_play();
+                return accept;
             } else if event.text == Key.RightArrow || event.text == Key.DownArrow {
                 root.play_next();
+                return accept;
             } else if event.text == Key.LeftArrow || event.text == Key.UpArrow {
                 root.play_prev();
+                return accept;
             } else if event.text == Key.F1 {
                 tabs.current-index = 0;
+                return accept;
             } else if event.text == Key.F2 {
                 tabs.current-index = 1;
+                return accept;
             } else if event.text == Key.F3 {
                 tabs.current-index = 2;
+                return accept;
             } else if event.text == Key.F4 {
                 tabs.current-index = 3;
+                return accept;
             }
-            return accept;
+            return reject;
         }
     }
 }
