@@ -4,12 +4,14 @@ export component LyricLine inherits Window {
     in-out property <bool> playing;
     callback triggered();
     Text {
+        width: 100%;
         horizontal-alignment: center;
         vertical-alignment: center;
         color: playing ? cyan : white;
         text: content;
         font-size: playing ? 15px : 13px;
         font-weight: playing ? 800 : 0;
+        overflow: TextOverflow.elide;
     }
 
     background: transparent;

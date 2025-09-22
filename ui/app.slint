@@ -62,10 +62,10 @@ export global UIState {
 }
 
 export component MainWindow inherits Window {
-    preferred-width: 750px;
-    preferred-height: 500px;
-    min-height: 500px;
-    min-width: 750px;
+    preferred-width: 800px;
+    preferred-height: 550px;
+    min-height: 550px;
+    min-width: 800px;
     title: "Zeedle";
     icon: @image-url("cover.svg");
     forward-focus: key-input-handler;
@@ -160,7 +160,7 @@ export component MainWindow inherits Window {
                                     text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
                                     vertical-alignment: center;
                                     horizontal-alignment: center;
-                                    wrap: TextWrap.word-wrap;
+                                    overflow: TextOverflow.elide;
                                 }
                             }
                         }
@@ -268,34 +268,70 @@ export component MainWindow inherits Window {
         Tab {
             title: "歌词";
             Rectangle {
+                width: 100%;
+                height: 100%;
+                z: -5;
                 TouchArea {
                     double-clicked => {
                         tabs.current-index = 0; // 切换到歌曲列表页
                     }
                 }
-
-                width: 100%;
-                height: 100%;
-                background: transparent;
-                Image {
-                    source: UIState.album_image;
-                    image-fit: fill;
-                }
-
-                opacity: 0.2;
-                z: -10;
             }
 
-            VerticalLayout {
-                alignment: center;
-                lyric-win := ListView {
-                    height: 100%;
-                    width: 100%;
-                    mouse-drag-pan-enabled: false;
-                    viewport-y <=> UIState.lyric_viewport_y;
-                    for item in UIState.lyrics: LyricLine {
-                        content: item.text;
-                        playing: (UIState.progress >= item.time) && (UIState.progress < item.time + item.duration);
+            HorizontalLayout {
+                width: 100%;
+                height: 100%;
+                VerticalLayout {
+                    width: 30%;
+                    alignment: center;
+                    lyric-image := Rectangle {
+                        x: parent.width / 2 - self.width / 2;
+                        width: 180px;
+                        height: self.width;
+                        clip: true;
+                        border-radius: 8px;
+                        drop-shadow-blur: 8px;
+                        drop-shadow-color: rgb(150, 150, 150);
+                        Image {
+                            width: 100%;
+                            height: 100%;
+                            source: UIState.album_image;
+                        }
+                    }
+
+                    Text {
+                        width: 100%;
+                        height: 25px;
+                        font-size: 13px;
+                        x: lyric-image.x;
+                        vertical-alignment: bottom;
+                        text: "歌手: " + UIState.current_song.singer;
+                        overflow: elide;
+                    }
+
+                    Text {
+                        width: 100%;
+                        height: 25px;
+                        font-size: 13px;
+                        x: lyric-image.x;
+                        vertical-alignment: bottom;
+                        text: "歌曲: " +  UIState.current_song.song_name;
+                        overflow: elide;
+                    }
+                }
+
+                VerticalLayout {
+                    width: 70%;
+                    alignment: center;
+                    ListView {
+                        height: 100%;
+                        width: 100%;
+                        mouse-drag-pan-enabled: false;
+                        viewport-y <=> UIState.lyric_viewport_y;
+                        for item in UIState.lyrics: LyricLine {
+                            content: item.text;
+                            playing: (UIState.progress >= item.time) && (UIState.progress < item.time + item.duration);
+                        }
                     }
                 }
             }
