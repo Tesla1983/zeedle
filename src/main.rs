@@ -67,10 +67,22 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     let ui_state = ui.global::<UIState>();
     let cfg = Config::load();
     let song_list = utils::read_song_list(cfg.song_dir.clone(), cfg.sort_key, cfg.sort_ascending);
+    if song_list.is_empty() {
+        log::warn!(
+            "song list is empty in directory: {:?}, using default UI state ...",
+            cfg.song_dir
+        );
+        set_raw_ui_state(ui);
+        return;
+    }
+    log::info!(
+        "loaded {} songs from directory: {:?}",
+        song_list.len(),
+        cfg.song_dir
+    );
     ui_state.set_sort_key(cfg.sort_key);
     ui_state.set_sort_ascending(cfg.sort_ascending);
     ui_state.set_progress(cfg.progress);
-    ui_state.set_duration(cfg.duration);
     ui_state.set_paused(true);
     ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_song_list(song_list.as_slice().into());
@@ -81,32 +93,43 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
             .into(),
     );
     ui_state.set_about_info(utils::get_about_info());
-
-    if let Some(song_info) = song_list.get(cfg.current_song_id.unwrap_or(0)) {
-        ui_state.set_current_song(song_info.clone());
-        ui_state.set_lyrics(
-            utils::read_lyrics(song_info.song_path.as_str().into())
-                .as_slice()
-                .into(),
-        );
-        let cover = utils::read_album_cover(song_info.song_path.as_str().into());
-        let cover = match cover {
-            Some((buffer, width, height)) => utils::from_image_to_slint(buffer, width, height),
-            None => utils::get_default_album_cover(),
-        };
-        ui_state.set_album_image(cover);
-        let file = std::fs::File::open(&song_info.song_path)
-            .expect(format!("failed to open audio file: {}", song_info.song_path).as_str());
-        let source = Decoder::try_from(file).expect("failed to decode audio file");
-        sink.append(source);
-        sink.pause();
-        sink.try_seek(Duration::from_secs_f32(cfg.progress))
-            .expect("failed to seek to given position");
-        let mut history = ui_state.get_play_history().iter().collect::<Vec<_>>();
-        history.push(song_info.clone());
-        ui_state.set_play_history(history.as_slice().into());
-        ui_state.set_history_index(0);
-    }
+    let cur_song_info = utils::read_meta_info(
+        &cfg.current_song_path
+            .unwrap_or(song_list[0].song_path.as_str().into()),
+    )
+    .expect("failed to read meta info of current song");
+    let dura = cur_song_info
+        .clone()
+        .duration
+        .split(':')
+        .map(|x| x.parse::<f32>().unwrap_or(0.))
+        .rev()
+        .reduce(|acc, x| acc + x * 60.)
+        .unwrap_or(0.);
+    ui_state.set_duration(dura);
+    ui_state.set_current_song(cur_song_info.clone());
+    ui_state.set_lyrics(
+        utils::read_lyrics(cur_song_info.song_path.as_str().into())
+            .as_slice()
+            .into(),
+    );
+    let cover = utils::read_album_cover(cur_song_info.song_path.as_str().into());
+    let cover = match cover {
+        Some((buffer, width, height)) => utils::from_image_to_slint(buffer, width, height),
+        None => utils::get_default_album_cover(),
+    };
+    ui_state.set_album_image(cover);
+    let file = std::fs::File::open(&cur_song_info.song_path)
+        .expect(format!("failed to open audio file: {}", cur_song_info.song_path).as_str());
+    let source = Decoder::try_from(file).expect("failed to decode audio file");
+    sink.append(source);
+    sink.pause();
+    sink.try_seek(Duration::from_secs_f32(cfg.progress))
+        .expect("failed to seek to given position");
+    let mut history = ui_state.get_play_history().iter().collect::<Vec<_>>();
+    history.push(cur_song_info.clone());
+    ui_state.set_play_history(history.as_slice().into());
+    ui_state.set_history_index(0);
 }
 
 fn main() {
@@ -573,9 +596,8 @@ fn main() {
     Config::save({
         Config {
             song_dir: ui_state.get_song_dir().as_str().into(),
-            current_song_id: Some(ui_state.get_current_song().id as usize),
+            current_song_path: Some(ui_state.get_current_song().song_path.as_str().into()),
             progress: ui_state.get_progress(),
-            duration: ui_state.get_duration(),
             play_mode: ui_state.get_play_mode(),
             sort_key: ui_state.get_sort_key(),
             sort_ascending: ui_state.get_sort_ascending(),

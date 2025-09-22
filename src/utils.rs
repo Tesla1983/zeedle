@@ -34,7 +34,7 @@ fn truncate_by_width(s: &str, max_width: usize) -> String {
 }
 
 /// Read meta info from audio file `fp`, return a SongInfo
-fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
+pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
     if let Ok(tagged) = lofty::read_from_path(fp) {
         let dura = tagged.properties().duration().as_secs_f32();
         if let Some(tag) = tagged.primary_tag() {

@@ -13,9 +13,8 @@ fn get_cfg_path() -> PathBuf {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Config {
     pub song_dir: PathBuf,
-    pub current_song_id: Option<usize>,
+    pub current_song_path: Option<PathBuf>,
     pub progress: f32,
-    pub duration: f32,
     pub play_mode: PlayMode,
     pub sort_key: SortKey,
     pub sort_ascending: bool,
@@ -26,9 +25,8 @@ impl Default for Config {
             song_dir: home::home_dir()
                 .expect("no home directory found")
                 .join("Music"),
-            current_song_id: None,
+            current_song_path: None,
             progress: 0.0,
-            duration: 0.0,
             play_mode: PlayMode::InOrder,
             sort_key: SortKey::BySongName,
             sort_ascending: true,
