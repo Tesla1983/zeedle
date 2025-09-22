@@ -172,16 +172,20 @@ export component SongItem inherits Window {
                 Rectangle {
                     width: 33%;
                     Text {
+                        width: 100%;
                         x: parent.width * 0.4;
                         text: info.song-name;
+                        overflow: elide;
                     }
                 }
 
                 Rectangle {
                     width: 33%;
                     Text {
+                        width: 100%;
                         x: parent.width * 0.4;
                         text: info.singer;
+                        overflow: elide;
                     }
                 }
 

@@ -11,27 +11,9 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 use slint::{SharedString, ToSharedString};
-use unicode_width::UnicodeWidthChar;
 use walkdir::WalkDir;
 
 use crate::slint_types::{LyricItem, SongInfo, SortKey};
-
-fn truncate_by_width(s: &str, max_width: usize) -> String {
-    let mut width = 0;
-    let mut result = String::new();
-
-    for c in s.chars() {
-        let w = UnicodeWidthChar::width(c).unwrap_or(0);
-        if width + w > max_width {
-            result.push_str("...");
-            return result;
-        }
-        width += w;
-        result.push(c);
-    }
-
-    result
-}
 
 /// Read meta info from audio file `fp`, return a SongInfo
 pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
@@ -45,10 +27,8 @@ pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
                     .flatten()
                     .unwrap_or("unknown"),
             );
-            let song_name = truncate_by_width(song_name, 24);
             let singer_name = tag.artist();
             let singer_name = singer_name.as_deref().unwrap_or("unknown");
-            let singer_name = truncate_by_width(singer_name, 24);
 
             let item = SongInfo {
                 id: 0,
