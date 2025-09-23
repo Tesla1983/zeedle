@@ -26,6 +26,7 @@ enum PlayerCommand {
     SwitchMode(PlayMode),          // 切换播放模式
     RefreshSongList(PathBuf),      // 刷新歌曲列表
     SortSongList(SortKey, bool),   // 刷新歌曲列表
+    SetLang(String),               // 设置语言
 }
 
 /// Set UI state to default (no song)
@@ -82,9 +83,12 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     );
     ui_state.set_sort_key(cfg.sort_key);
     ui_state.set_sort_ascending(cfg.sort_ascending);
+    ui_state.set_last_sort_key(cfg.sort_key);
     ui_state.set_progress(cfg.progress);
     ui_state.set_paused(true);
     ui_state.set_play_mode(cfg.play_mode);
+    ui_state.set_lang(cfg.lang.clone().into());
+    slint::select_bundled_translation(&cfg.lang).expect("failed to set language");
     ui_state.set_song_list(song_list.as_slice().into());
     ui_state.set_song_dir(
         cfg.song_dir
@@ -458,6 +462,18 @@ fn main() {
                     })
                     .unwrap();
                 }
+                PlayerCommand::SetLang(lang) => {
+                    let ui_weak = ui_weak.clone();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            slint::select_bundled_translation(&lang)
+                                .expect("failed to set language");
+                            let ui_state = ui.global::<UIState>();
+                            ui_state.set_lang(lang.into());
+                        }
+                    })
+                    .unwrap()
+                }
             }
         }
     });
@@ -535,6 +551,14 @@ fn main() {
                 .expect("failed to send sort song list command");
         });
     }
+    {
+        let tx = tx.clone();
+        ui.on_set_lang(move |lang| {
+            log::info!("request to set language to: {}", lang);
+            tx.send(PlayerCommand::SetLang(lang.as_str().into()))
+                .expect("failed to send set language command");
+        });
+    }
 
     // UI 定时刷新进度条
     let ui_weak = ui.as_weak();
@@ -601,6 +625,7 @@ fn main() {
             play_mode: ui_state.get_play_mode(),
             sort_key: ui_state.get_sort_key(),
             sort_ascending: ui_state.get_sort_ascending(),
+            lang: ui_state.get_lang().into(),
         }
     });
     log::info!("app exited");

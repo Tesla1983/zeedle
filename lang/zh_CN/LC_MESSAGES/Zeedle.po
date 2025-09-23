@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2025-09-23 07:48+0000\n"
-"PO-Revision-Date: 2025-09-23 15:51+0800\n"
+"POT-Creation-Date: 2025-09-23 10:22+0000\n"
+"PO-Revision-Date: 2025-09-23 18:24+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -12,37 +12,42 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Poedit 3.7\n"
 
-#: ui/app.slint:82
+#: ui/app.slint:85
 msgctxt "MainWindow"
 msgid "Gallery"
 msgstr "音乐列表"
 
-#: ui/app.slint:269
+#: ui/app.slint:272
 msgctxt "MainWindow"
 msgid "Lyric"
 msgstr "歌词"
 
-#: ui/app.slint:308
+#: ui/app.slint:311
 msgctxt "MainWindow"
 msgid "Artist: {}"
 msgstr "艺术家：{}"
 
-#: ui/app.slint:318
+#: ui/app.slint:321
 msgctxt "MainWindow"
 msgid "Title: {}"
 msgstr "歌曲：{}"
 
-#: ui/app.slint:341
+#: ui/app.slint:344
 msgctxt "MainWindow"
 msgid "Settings"
 msgstr "设置"
 
-#: ui/app.slint:352
+#: ui/app.slint:359
 msgctxt "MainWindow"
-msgid "Music directory:"
+msgid "Music directory: "
 msgstr "音乐文件夹："
 
-#: ui/app.slint:369
+#: ui/app.slint:381
+msgctxt "MainWindow"
+msgid "Language: "
+msgstr "语言："
+
+#: ui/app.slint:398
 msgctxt "MainWindow"
 msgid "About"
 msgstr "关于"
