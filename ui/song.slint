@@ -100,7 +100,7 @@ export component TitleBar inherits Window {
                 TitleBarItem {
                     width: 100%;
                     height: 100%;
-                    name: "歌曲";
+                    name: @tr("Title");
                     background: area1.has-hover ? rgb(40, 40, 40) : transparent;
                     display-sort-icon: key == SortKey.BySongName;
                     ascending-sort: ascending;
@@ -113,7 +113,7 @@ export component TitleBar inherits Window {
                     sort-items(SortKey.BySinger, ascending);
                 }
                 TitleBarItem {
-                    name: "歌手";
+                    name: @tr("Artist");
                     height: 100%;
                     width: 100%;
                     background: area2.has-hover ? rgb(40, 40, 40) : transparent;
@@ -128,7 +128,7 @@ export component TitleBar inherits Window {
                     sort-items(SortKey.ByDuration, ascending);
                 }
                 TitleBarItem {
-                    name: "时长";
+                    name: @tr("Duration");
                     height: 100%;
                     width: 100%;
                     background: area3.has-hover ? rgb(40, 40, 40) : transparent;

@@ -79,7 +79,7 @@ export component MainWindow inherits Window {
     callback sort_song_list(SortKey, bool);
     tabs := TabWidget {
         Tab {
-            title: "歌曲列表";
+            title: @tr("Gallery");
             VerticalLayout {
                 TitleBar {
                     ascending: UIState.sort_ascending;
@@ -266,7 +266,7 @@ export component MainWindow inherits Window {
         }
 
         Tab {
-            title: "歌词";
+            title: @tr("Lyric");
             Rectangle {
                 width: 100%;
                 height: 100%;
@@ -305,7 +305,7 @@ export component MainWindow inherits Window {
                         font-size: 13px;
                         x: lyric-image.x;
                         vertical-alignment: bottom;
-                        text: "歌手: " + UIState.current_song.singer;
+                        text: @tr("Artist: {}", UIState.current_song.singer);
                         overflow: elide;
                     }
 
@@ -315,7 +315,7 @@ export component MainWindow inherits Window {
                         font-size: 13px;
                         x: lyric-image.x;
                         vertical-alignment: bottom;
-                        text: "歌曲: " +  UIState.current_song.song_name;
+                        text: @tr("Title: {}", UIState.current_song.song_name);
                         overflow: elide;
                     }
                 }
@@ -338,7 +338,7 @@ export component MainWindow inherits Window {
         }
 
         Tab {
-            title: "设置";
+            title: @tr("Settings");
             VerticalLayout {
                 width: 100%;
                 height: 100%;
@@ -349,7 +349,7 @@ export component MainWindow inherits Window {
                     Rectangle {
                         width: 20%;
                         Text {
-                            text: "歌曲文件夹路径:";
+                            text: @tr("Music directory:");
                         }
                     }
 
@@ -366,7 +366,7 @@ export component MainWindow inherits Window {
         }
 
         Tab {
-            title: "关于";
+            title: @tr("About");
             Text {
                 width: 100%;
                 height: 100%;

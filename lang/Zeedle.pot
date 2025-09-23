@@ -1,0 +1,63 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2025-09-23 07:48+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: ui/app.slint:82
+msgctxt "MainWindow"
+msgid "Gallery"
+msgstr ""
+
+#: ui/app.slint:269
+msgctxt "MainWindow"
+msgid "Lyric"
+msgstr ""
+
+#: ui/app.slint:308
+msgctxt "MainWindow"
+msgid "Artist: {}"
+msgstr ""
+
+#: ui/app.slint:318
+msgctxt "MainWindow"
+msgid "Title: {}"
+msgstr ""
+
+#: ui/app.slint:341
+msgctxt "MainWindow"
+msgid "Settings"
+msgstr ""
+
+#: ui/app.slint:352
+msgctxt "MainWindow"
+msgid "Music directory:"
+msgstr ""
+
+#: ui/app.slint:369
+msgctxt "MainWindow"
+msgid "About"
+msgstr ""
+
+#: ui/song.slint:103
+msgctxt "TitleBar"
+msgid "Title"
+msgstr ""
+
+#: ui/song.slint:116
+msgctxt "TitleBar"
+msgid "Artist"
+msgstr ""
+
+#: ui/song.slint:131
+msgctxt "TitleBar"
+msgid "Duration"
+msgstr ""
+

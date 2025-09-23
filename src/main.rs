@@ -139,7 +139,7 @@ fn main() {
     std::panic::set_hook(Box::new(|info| {
         log::error!("panic occurred: {}", info);
     }));
-    let ins = single_instance::SingleInstance::new("Vanilla Player").unwrap();
+    let ins = single_instance::SingleInstance::new("Zeedle Music Player").unwrap();
     if !ins.is_single() {
         log::warn!("Vanilla player can only run one instance !");
         return;
