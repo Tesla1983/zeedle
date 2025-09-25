@@ -38,3 +38,9 @@ Lyrics Display:
 ## Note
 Zeedle is also an ideal starter project for anyone new to Rust GUI development.
 It’s lightweight, practical, and simple enough to help beginners gain real hands-on experience while building something useful. 🤗🤗🤗
+
+After typing it, you can get: 
+- how to use Rodio playback library to play audios
+- how to communicate between UI and backend threads
+- how to add hotkey bindings in Slint UI
+- how to support multiple languages in Slint UI
