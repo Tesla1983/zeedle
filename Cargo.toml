@@ -1,5 +1,5 @@
 [package]
-name = "Zeedle"
+name = "zeedle"
 version = "0.1.12-alpha.2"
 edition = "2024"
 authors = ["Jordan Haidee"]
