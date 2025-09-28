@@ -1,23 +1,24 @@
+import { Palette } from "std-widgets.slint";
 export component NextSongButton inherits Window {
     in-out property <int> w:100;
     in-out property <int> h:100;
     callback clicked();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color:gray;
+    property <color> icon-color: Palette.control-foreground;
     animate icon-color { duration: 200ms; }
     timer := Timer {
         interval: 200ms;
         running: false;
         triggered => {
-            root.icon-color = Colors.gray;
+            root.icon-color = Palette.control-foreground;
             self.stop();
         }
     }
 
     TouchArea {
         clicked => {
-            root.icon-color = Colors.cyan;
+            root.icon-color = Palette.control-background;
             timer.start();
             root.clicked();
         }
@@ -63,20 +64,20 @@ export component PrevSongButton inherits Window {
     callback clicked();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color:gray;
+    property <color> icon-color: Palette.control-foreground;
     animate icon-color { duration: 200ms; }
     timer := Timer {
         interval: 200ms;
         running: false;
         triggered => {
-            root.icon-color = Colors.gray;
+            root.icon-color = Palette.control-foreground;
             self.stop();
         }
     }
 
     TouchArea {
         clicked => {
-            root.icon-color = Colors.cyan;
+            root.icon-color = Palette.control-background;
             timer.start();
             root.clicked();
         };
@@ -123,20 +124,20 @@ export component PlayPauseButton inherits Window {
     callback toggled();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color:gray;
+    property <color> icon-color: Palette.control-foreground;
     animate icon-color { duration: 200ms; }
     timer := Timer {
         interval: 200ms;
         running: false;
         triggered => {
-            root.icon-color = Colors.gray;
+            root.icon-color = Palette.control-foreground;
             self.stop();
         }
     }
 
     TouchArea {
         clicked => {
-            root.icon-color = Colors.cyan;
+            root.icon-color = Palette.control-background;
             timer.start();
             root.toggled();
         }
@@ -256,7 +257,7 @@ export component InOrderButton inherits Window {
         }
 
         stroke-width: 1px;
-        stroke: selected ? cyan : gray;
+        stroke: selected ? Palette.selection-background : Palette.foreground;
     }
 }
 
@@ -318,7 +319,7 @@ export component RecursiveButton inherits Window {
         }
 
         stroke-width: 1px;
-        stroke: selected ? cyan : gray;
+        stroke: selected ? Palette.selection-background : Palette.foreground;
     }
 }
 
@@ -438,7 +439,7 @@ export component RandomButton inherits Window {
                 y: 0.1 * h;
             }
 
-            stroke: selected ? cyan : gray;
+            stroke: selected ? Palette.selection-background : Palette.foreground;
             stroke-width: 1px;
         }
     }

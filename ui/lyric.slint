@@ -1,3 +1,4 @@
+import { Palette } from "std-widgets.slint";
 export component LyricLine inherits Window {
     height: 30px;
     in-out property <string> content;
@@ -7,7 +8,7 @@ export component LyricLine inherits Window {
         width: 100%;
         horizontal-alignment: center;
         vertical-alignment: center;
-        color: playing ? cyan : white;
+        color: playing ? Palette.selection-background : Palette.foreground;
         text: content;
         font-size: playing ? 15px : 13px;
         font-weight: playing ? 800 : 0;

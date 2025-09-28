@@ -1,3 +1,4 @@
+import { Palette } from "std-widgets.slint";
 export struct SongInfo {
     id:int,
     song_name:string,
@@ -101,7 +102,7 @@ export component TitleBar inherits Window {
                     width: 100%;
                     height: 100%;
                     name: @tr("Title");
-                    background: area1.has-hover ? rgb(40, 40, 40) : transparent;
+                    background: area1.has-hover ? Palette.control-background : transparent;
                     display-sort-icon: key == SortKey.BySongName;
                     ascending-sort: ascending;
                 }
@@ -116,7 +117,7 @@ export component TitleBar inherits Window {
                     name: @tr("Artist");
                     height: 100%;
                     width: 100%;
-                    background: area2.has-hover ? rgb(40, 40, 40) : transparent;
+                    background: area2.has-hover ? Palette.control-background : transparent;
                     display-sort-icon: key == SortKey.BySinger;
                     ascending-sort: ascending;
                 }
@@ -131,7 +132,7 @@ export component TitleBar inherits Window {
                     name: @tr("Duration");
                     height: 100%;
                     width: 100%;
-                    background: area3.has-hover ? rgb(40, 40, 40) : transparent;
+                    background: area3.has-hover ? Palette.control-background : transparent;
                     display-sort-icon: key == SortKey.ByDuration;
                     ascending-sort: ascending;
                 }
@@ -151,7 +152,7 @@ export component TitleBar inherits Window {
                 y: 0;
             }
 
-            stroke: white;
+            stroke: Palette.foreground;
             stroke-width: 0.3px;
         }
     }
@@ -161,11 +162,11 @@ export component SongItem inherits Window {
     height: 30px;
     in property <SongInfo> info:{ id:0, song_name:"xxx", singer:"xxx", duration:"xxx", song_path:"xxx" };
     callback double_clicked();
-    background: area.has-hover ? rgb(40, 40, 40) : transparent;
+    background: area.has-hover ? Palette.control-background : transparent;
     VerticalLayout {
         area := TouchArea {
             double-clicked => {
-                double_clicked()
+                double_clicked();
             }
             HorizontalLayout {
                 alignment: space-between;
@@ -212,7 +213,7 @@ export component SongItem inherits Window {
                 y: 0;
             }
 
-            stroke: white;
+            stroke: Palette.foreground;
             stroke-width: 0.15px;
         }
     }
