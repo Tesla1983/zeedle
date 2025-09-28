@@ -1,6 +1,6 @@
 fn main() {
     let cfg = slint_build::CompilerConfiguration::new()
-        .with_style("fluent-dark".into())
+        .with_style("fluent".into())
         .with_bundled_translations("lang");
     slint_build::compile_with_config("ui/app.slint", cfg).expect("slint build failed");
     if std::env::var("CARGO_CFG_TARGET_OS").expect("can't find this env variable!") == "windows" {

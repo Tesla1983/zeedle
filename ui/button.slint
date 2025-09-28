@@ -5,21 +5,9 @@ export component NextSongButton inherits Window {
     callback clicked();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color: Palette.control-foreground;
-    animate icon-color { duration: 200ms; }
-    timer := Timer {
-        interval: 200ms;
-        running: false;
-        triggered => {
-            root.icon-color = Palette.control-foreground;
-            self.stop();
-        }
-    }
 
     TouchArea {
         clicked => {
-            root.icon-color = Palette.control-background;
-            timer.start();
             root.clicked();
         }
         Path {
@@ -52,7 +40,7 @@ export component NextSongButton inherits Window {
                 y: h;
             }
 
-            stroke: icon-color;
+            stroke: Palette.control-foreground;
             stroke-width: root.w * 0.1px;
         }
     }
@@ -64,21 +52,9 @@ export component PrevSongButton inherits Window {
     callback clicked();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color: Palette.control-foreground;
-    animate icon-color { duration: 200ms; }
-    timer := Timer {
-        interval: 200ms;
-        running: false;
-        triggered => {
-            root.icon-color = Palette.control-foreground;
-            self.stop();
-        }
-    }
 
     TouchArea {
         clicked => {
-            root.icon-color = Palette.control-background;
-            timer.start();
             root.clicked();
         };
         Path {
@@ -111,7 +87,7 @@ export component PrevSongButton inherits Window {
                 y: h;
             }
 
-            stroke: icon-color;
+            stroke: Palette.control-foreground;
             stroke-width: root.w * 0.1px;
         }
     }
@@ -124,21 +100,9 @@ export component PlayPauseButton inherits Window {
     callback toggled();
     width: w * 1px;
     height: h * 1px;
-    property <color> icon-color: Palette.control-foreground;
-    animate icon-color { duration: 200ms; }
-    timer := Timer {
-        interval: 200ms;
-        running: false;
-        triggered => {
-            root.icon-color = Palette.control-foreground;
-            self.stop();
-        }
-    }
 
     TouchArea {
         clicked => {
-            root.icon-color = Palette.control-background;
-            timer.start();
             root.toggled();
         }
         if !root.paused:
@@ -189,7 +153,7 @@ export component PlayPauseButton inherits Window {
 
             Close { }
 
-            stroke: icon-color;
+            stroke: Palette.control-foreground;
             stroke-width: root.w * 0.1px;
         }
         if root.paused:
@@ -213,7 +177,7 @@ export component PlayPauseButton inherits Window {
 
             Close { }
 
-            stroke: icon-color;
+            stroke: Palette.control-foreground;
             stroke-width: root.w * 0.1px;
         }
     }
