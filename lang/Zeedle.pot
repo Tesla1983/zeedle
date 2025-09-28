@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-09-23 10:22+0000\n"
+"POT-Creation-Date: 2025-09-28 15:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -12,57 +12,72 @@ msgstr ""
 "Language: \n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ui/app.slint:85
+#: ui/app.slint:96
 msgctxt "MainWindow"
 msgid "Gallery"
 msgstr ""
 
-#: ui/app.slint:272
+#: ui/app.slint:282
 msgctxt "MainWindow"
-msgid "Lyric"
+msgid "Lyrics"
 msgstr ""
 
-#: ui/app.slint:311
+#: ui/app.slint:320
 msgctxt "MainWindow"
 msgid "Artist: {}"
 msgstr ""
 
-#: ui/app.slint:321
+#: ui/app.slint:330
 msgctxt "MainWindow"
 msgid "Title: {}"
 msgstr ""
 
-#: ui/app.slint:344
+#: ui/app.slint:353
 msgctxt "MainWindow"
 msgid "Settings"
 msgstr ""
 
-#: ui/app.slint:359
+#: ui/app.slint:368
 msgctxt "MainWindow"
 msgid "Music directory: "
 msgstr ""
 
-#: ui/app.slint:381
+#: ui/app.slint:390
 msgctxt "MainWindow"
 msgid "Language: "
 msgstr ""
 
-#: ui/app.slint:398
+#: ui/app.slint:413
+msgctxt "MainWindow"
+msgid "Light theme: "
+msgstr ""
+
+#: ui/app.slint:420
+msgctxt "MainWindow"
+msgid "On"
+msgstr ""
+
+#: ui/app.slint:420
+msgctxt "MainWindow"
+msgid "Off"
+msgstr ""
+
+#: ui/app.slint:430
 msgctxt "MainWindow"
 msgid "About"
 msgstr ""
 
-#: ui/song.slint:103
+#: ui/song.slint:104
 msgctxt "TitleBar"
 msgid "Title"
 msgstr ""
 
-#: ui/song.slint:116
+#: ui/song.slint:117
 msgctxt "TitleBar"
 msgid "Artist"
 msgstr ""
 
-#: ui/song.slint:131
+#: ui/song.slint:132
 msgctxt "TitleBar"
 msgid "Duration"
 msgstr ""
