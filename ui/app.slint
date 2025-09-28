@@ -394,7 +394,7 @@ export component MainWindow inherits Window {
                     ComboBox {
                         width: 200px;
                         current-value <=> UIState.lang;
-                        model: ["", "zh_CN"];
+                        model: ["", "zh_CN", "es", "fr", "de", "ru"];
                         selected(current-value) => {
                             root.set_lang(current-value);
                         }

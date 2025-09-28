@@ -13,7 +13,7 @@ Enjoy your music in less than 0.5s:
 - ⚡ Instant startup — your music begins the moment you click.
 - 🎶 Local focus — lightweight and distraction-free.
 - ✨ Minimal Dark UI — nothing but your music, beautifully clear.
-- 🦜 Multiple language support — English/Chinese.
+- 🦜 Multiple language support — English/Chinese/Spanish/French/German/Russian.
 - ⌨️ Hotkey support — total freedom, no mouse needed.
 
 <a href="README-zh.md">中文介绍</a> can be seen here.

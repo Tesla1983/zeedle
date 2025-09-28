@@ -1,0 +1,82 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2025-09-28 15:04+0000\n"
+"PO-Revision-Date: 2025-09-28 23:30+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Spanish <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/app.slint:96
+msgctxt "MainWindow"
+msgid "Gallery"
+msgstr "Galería"
+
+#: ui/app.slint:282
+msgctxt "MainWindow"
+msgid "Lyrics"
+msgstr "Letras"
+
+#: ui/app.slint:320
+msgctxt "MainWindow"
+msgid "Artist: {}"
+msgstr "Artista: {}"
+
+#: ui/app.slint:330
+msgctxt "MainWindow"
+msgid "Title: {}"
+msgstr "Título: {}"
+
+#: ui/app.slint:353
+msgctxt "MainWindow"
+msgid "Settings"
+msgstr "Configuración"
+
+#: ui/app.slint:368
+msgctxt "MainWindow"
+msgid "Music directory: "
+msgstr "Directorio de música: "
+
+#: ui/app.slint:390
+msgctxt "MainWindow"
+msgid "Language: "
+msgstr "Idioma: "
+
+#: ui/app.slint:413
+msgctxt "MainWindow"
+msgid "Light theme: "
+msgstr "Tema claro: "
+
+#: ui/app.slint:420
+msgctxt "MainWindow"
+msgid "On"
+msgstr "Activado"
+
+#: ui/app.slint:420
+msgctxt "MainWindow"
+msgid "Off"
+msgstr "Desactivado"
+
+#: ui/app.slint:430
+msgctxt "MainWindow"
+msgid "About"
+msgstr "Acerca de"
+
+#: ui/song.slint:104
+msgctxt "TitleBar"
+msgid "Title"
+msgstr "Título"
+
+#: ui/song.slint:117
+msgctxt "TitleBar"
+msgid "Artist"
+msgstr "Artista"
+
+#: ui/song.slint:132
+msgctxt "TitleBar"
+msgid "Duration"
+msgstr "Duración"
