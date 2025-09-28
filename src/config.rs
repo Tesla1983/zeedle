@@ -19,6 +19,7 @@ pub struct Config {
     pub sort_key: SortKey,
     pub sort_ascending: bool,
     pub lang: String,
+    pub light_ui: bool,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -31,7 +32,8 @@ impl Default for Config {
             play_mode: PlayMode::InOrder,
             sort_key: SortKey::BySongName,
             sort_ascending: true,
-            lang: "en_US".into(),
+            lang: "".into(),
+            light_ui: false,
         }
     }
 }

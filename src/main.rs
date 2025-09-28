@@ -81,6 +81,7 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
         song_list.len(),
         cfg.song_dir
     );
+    ui.invoke_set_light_theme(cfg.light_ui);
     ui_state.set_sort_key(cfg.sort_key);
     ui_state.set_sort_ascending(cfg.sort_ascending);
     ui_state.set_last_sort_key(cfg.sort_key);
@@ -88,7 +89,8 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     ui_state.set_paused(true);
     ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_lang(cfg.lang.clone().into());
-    slint::select_bundled_translation(&cfg.lang).expect("failed to set language");
+    slint::select_bundled_translation(&cfg.lang)
+        .expect(format!("failed to set language: {}", cfg.lang).as_str());
     ui_state.set_song_list(song_list.as_slice().into());
     ui_state.set_song_dir(
         cfg.song_dir
@@ -141,7 +143,7 @@ fn main() {
     logger::init_default_logger();
     // when panics happen, auto port errors to log
     std::panic::set_hook(Box::new(|info| {
-        log::error!("panic occurred: {}", info);
+        log::error!("{}", info);
     }));
     let ins = single_instance::SingleInstance::new("Zeedle Music Player").unwrap();
     if !ins.is_single() {
@@ -559,7 +561,6 @@ fn main() {
                 .expect("failed to send set language command");
         });
     }
-
     // UI 定时刷新进度条
     let ui_weak = ui.as_weak();
     let timer = slint::Timer::default();
@@ -626,6 +627,7 @@ fn main() {
             sort_key: ui_state.get_sort_key(),
             sort_ascending: ui_state.get_sort_ascending(),
             lang: ui_state.get_lang().into(),
+            light_ui: ui_state.get_light_ui(),
         }
     });
     log::info!("app exited");

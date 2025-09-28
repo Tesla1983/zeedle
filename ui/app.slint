@@ -1,4 +1,4 @@
-import { ListView, ComboBox, Slider, TabWidget, StandardListView, LineEdit } from "std-widgets.slint";
+import { ListView, ComboBox, Slider, TabWidget, StandardListView, LineEdit, Switch, Palette } from "std-widgets.slint";
 import { NextSongButton, PrevSongButton, PlayPauseButton, OverlapButton, RandomButton, PlayMode } from "button.slint";
 import { SongInfo, TitleBar, SongItem, SortKey } from "song.slint";
 import { LyricLine } from "lyric.slint";
@@ -61,6 +61,8 @@ export global UIState {
     in-out property <bool> sort_ascending: true;
     // 当前语言
     in-out property <string> lang;
+    // 主题颜色
+    in-out property <bool> light_ui;
 }
 
 export component MainWindow inherits Window {
@@ -80,6 +82,15 @@ export component MainWindow inherits Window {
     callback refresh_song_list(string);
     callback sort_song_list(SortKey, bool);
     callback set_lang(string);
+    callback set_light_theme(bool);
+    set_light_theme(yes) => {
+        UIState.light_ui = yes;
+        if (yes) {
+            Palette.color-scheme = ColorScheme.light;
+        } else {
+            Palette.color-scheme = ColorScheme.dark;
+        }
+    }
     tabs := TabWidget {
         Tab {
             title: @tr("Gallery");
@@ -386,6 +397,29 @@ export component MainWindow inherits Window {
                         model: ["", "zh_CN"];
                         selected(current-value) => {
                             root.set_lang(current-value);
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    Rectangle {
+                        height: 30px;
+                        width: 200px;
+                        Text {
+                            x: parent.width - self.width;
+                            vertical-alignment: center;
+                            text: @tr("Light theme: ");
+                        }
+                    }
+
+                    light-switch := Switch {
+                        width: 200px;
+                        checked <=> UIState.light_ui;
+                        text: self.checked ? @tr("On") : @tr("Off");
+                        toggled => {
+                            root.set_light_theme(self.checked);
                         }
                     }
                 }
