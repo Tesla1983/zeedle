@@ -184,8 +184,8 @@ export component MainWindow inherits Window {
                         OverlapButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
-                            w: 20;
-                            h: 20;
+                            width: 20px;
+                            height: 20px;
                             mode <=> UIState.play_mode;
                             clicked => {
                                 if (UIState.play_mode == PlayMode.InOrder) {
@@ -202,8 +202,8 @@ export component MainWindow inherits Window {
                         PrevSongButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
-                            w: 20;
-                            h: 20;
+                            width: 20px;
+                            height: 20px;
                             clicked => {
                                 root.play_prev();
                             }
@@ -215,8 +215,8 @@ export component MainWindow inherits Window {
                         PlayPauseButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
-                            w: 20;
-                            h: 20;
+                            width: 20px;
+                            height: 20px;
                             // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
                             paused <=> UIState.paused;
                             toggled => {
@@ -230,8 +230,8 @@ export component MainWindow inherits Window {
                         NextSongButton {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
-                            w: 20;
-                            h: 20;
+                            width: 20px;
+                            height: 20px;
                             clicked => {
                                 root.play_next();
                             }
@@ -245,8 +245,8 @@ export component MainWindow inherits Window {
                             x: parent.width / 2 - self.width / 2;
                             y: parent.height / 2 - self.height / 2;
                             selected: UIState.play_mode == PlayMode.Random;
-                            w: 20;
-                            h: 20;
+                            width: 20px;
+                            height: 20px;
                             clicked => {
                                 switch_mode(PlayMode.Random);
                             }
