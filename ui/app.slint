@@ -82,8 +82,7 @@ export component MainWindow inherits Window {
     callback refresh_song_list(string);
     callback sort_song_list(SortKey, bool);
     callback set_lang(string);
-    callback set_light_theme(bool);
-    set_light_theme(yes) => {
+    public function set_light_theme(yes: bool) {
         UIState.light_ui = yes;
         if (yes) {
             Palette.color-scheme = ColorScheme.light;
