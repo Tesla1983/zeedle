@@ -47,7 +47,6 @@ fn set_raw_ui_state(ui: &MainWindow) {
         duration: "00:00".into(),
     });
     ui_state.set_lyrics(Vec::new().as_slice().into());
-    ui_state.set_progress_info_str("00:00 / 00:00".to_shared_string());
     ui_state.set_song_list(Vec::new().as_slice().into());
     ui_state.set_song_dir(
         Config::default()
@@ -561,6 +560,10 @@ fn main() {
                 .expect("failed to send set language command");
         });
     }
+    // pure callback to format duration string
+    ui.on_format_duration(|dura| {
+        format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60).to_shared_string()
+    });
     // UI 定时刷新进度条
     let ui_weak = ui.as_weak();
     let timer = slint::Timer::default();
@@ -576,16 +579,6 @@ fn main() {
                 if !ui_state.get_dragging() {
                     ui_state.set_progress(sink_guard.get_pos().as_secs_f32());
                 }
-                ui_state.set_progress_info_str(
-                    format!(
-                        "{:02}:{:02} / {:02}:{:02}",
-                        (ui_state.get_progress() as u32) / 60,
-                        (ui_state.get_progress() as u32) % 60,
-                        (ui_state.get_duration() as u32) / 60,
-                        (ui_state.get_duration() as u32) % 60
-                    )
-                    .to_shared_string(),
-                );
                 if !ui_state.get_paused() {
                     for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
                         let delta = item.time - ui_state.get_progress();

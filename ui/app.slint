@@ -24,8 +24,6 @@ export global UIState {
     in-out property <float> progress;
     // 总时长 (秒)
     in-out property <float> duration;
-    // 当前播放进度文本
-    in-out property <string> progress_info_str;
     // 播放/暂停状态
     in-out property <bool> paused;
     // 是否正在拖动进度条
@@ -82,6 +80,7 @@ export component MainWindow inherits Window {
     callback refresh_song_list(string);
     callback sort_song_list(SortKey, bool);
     callback set_lang(string);
+    pure callback format_duration(float) -> string;
     public function set_light_theme(yes: bool) {
         UIState.light_ui = yes;
         if (yes) {
@@ -262,7 +261,7 @@ export component MainWindow inherits Window {
 
                         Text {
                             x: parent.width / 2 - self.width / 2;
-                            text: UIState.progress_info_str;
+                            text: format_duration(UIState.progress) + " / " + format_duration(UIState.duration);
                             vertical-alignment: center;
                             horizontal-alignment: center;
                         }
