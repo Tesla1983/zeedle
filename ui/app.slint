@@ -63,11 +63,361 @@ export global UIState {
     in-out property <bool> light_ui;
 }
 
+export component SongListView inherits Window {
+    in-out property <bool> ascending;
+    in-out property <SortKey> sort-key;
+    in-out property <SortKey> last-sort-key;
+    in-out property <[SongInfo]> song-list;
+    callback sort-songs(SortKey, bool);
+    callback play-song(SongInfo, TriggerSource);
+    VerticalLayout {
+        width: 100%;
+        height: 100%;
+        TitleBar {
+            ascending: root.ascending;
+            key: root.sort-key;
+            sort-items(key, ascending) => {
+                if (root.last-sort-key == key) {
+                    root.sort-songs(key, !ascending);
+                } else {
+                    root.sort-songs(key, true)
+                }
+            }
+        }
+
+        ListView {
+            for item in root.song-list: SongItem {
+                info: item;
+                double_clicked => {
+                    root.play-song(item, TriggerSource.ClickItem);
+                }
+            }
+        }
+    }
+}
+
+export component ControlPanel inherits Window {
+    in-out property <float> progress;
+    in property <float> duration;
+    in property <bool> paused;
+    in property <PlayMode> play_mode;
+    in-out property <bool> dragging;
+    in property <SongInfo> current_song;
+    in property <image> album_image;
+    callback change-progress(float);
+    callback toggle-play();
+    callback play-next();
+    callback play-prev();
+    callback switch-mode(PlayMode);
+    callback double-clicked();
+    pure callback format-duration(float) -> string;
+    VerticalLayout {
+        width: 100%;
+        height: 100%;
+        Slider {
+            minimum: 0;
+            maximum: root.duration;
+            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+            value <=> root.progress;
+            released(v) => {
+                root.dragging = false;
+                change_progress(v);
+            }
+            changed(_) => {
+                root.dragging = true;
+            }
+        }
+
+        HorizontalLayout {
+            height: 80%;
+            alignment: center;
+            TouchArea {
+                width: 35%;
+                height: 100%;
+                double-clicked => {
+                    root.double-clicked()
+                };
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 3px;
+                    Rectangle {
+                        width: 20%;
+                        height: 100%;
+                        Rectangle {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 4px;
+                            clip: true;
+                            drop-shadow-blur: 6px;
+                            Image {
+                                y: parent.height / 2 - self.height / 2;
+                                width: 100%;
+                                height: 100%;
+                                source: root.album_image;
+                                image-fit: contain;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 80%;
+                        height: 100%;
+                        Text {
+                            width: 100%;
+                            x: parent.width / 2 - self.width / 2;
+                            text: root.current_song.song_name + " - " + root.current_song.singer;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                            overflow: TextOverflow.elide;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                OverlapButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    width: 20px;
+                    height: 20px;
+                    mode: root.play_mode;
+                    clicked => {
+                        if (root.play_mode == PlayMode.InOrder) {
+                            root.switch_mode(PlayMode.Recursive);
+                        } else {
+                            root.switch_mode(PlayMode.InOrder);
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                PrevSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    width: 20px;
+                    height: 20px;
+                    clicked => {
+                        root.play_prev();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                PlayPauseButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    width: 20px;
+                    height: 20px;
+                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
+                    paused: root.paused;
+                    toggled => {
+                        root.toggle_play();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                NextSongButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    width: 20px;
+                    height: 20px;
+                    clicked => {
+                        root.play_next();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 6%;
+                border-color: transparent;
+                RandomButton {
+                    x: parent.width / 2 - self.width / 2;
+                    y: parent.height / 2 - self.height / 2;
+                    selected: root.play_mode == PlayMode.Random;
+                    width: 20px;
+                    height: 20px;
+                    clicked => {
+                        root.switch_mode(PlayMode.Random);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 35%;
+                TouchArea {
+                    double-clicked => {
+                        root.double-clicked()
+                    }
+                }
+
+                Text {
+                    x: parent.width / 2 - self.width / 2;
+                    text: root.format-duration(root.progress) + " / " + root.format-duration(root.duration);
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+export component LyricsPanel inherits Window {
+    in property <image> album_image;
+    in property <SongInfo> current_song;
+    in property <[LyricItem]> lyrics;
+    in property <float> progress;
+    in-out property <length> lyric_viewport_y;
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        VerticalLayout {
+            width: 30%;
+            alignment: center;
+            lyric-image := Rectangle {
+                x: parent.width / 2 - self.width / 2;
+                width: 180px;
+                height: self.width;
+                clip: true;
+                border-radius: 8px;
+                drop-shadow-blur: 8px;
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: album_image;
+                }
+            }
+
+            Text {
+                width: 100%;
+                height: 25px;
+                font-size: 13px;
+                x: lyric-image.x;
+                vertical-alignment: bottom;
+                text: @tr("Artist: {}", current_song.singer);
+                overflow: elide;
+            }
+
+            Text {
+                width: 100%;
+                height: 25px;
+                font-size: 13px;
+                x: lyric-image.x;
+                vertical-alignment: bottom;
+                text: @tr("Title: {}", current_song.song_name);
+                overflow: elide;
+            }
+        }
+
+        VerticalLayout {
+            width: 70%;
+            alignment: center;
+            ListView {
+                height: 100%;
+                width: 100%;
+                mouse-drag-pan-enabled: false;
+                viewport-y <=> lyric_viewport_y;
+                for item in lyrics: LyricLine {
+                    content: item.text;
+                    playing: (progress >= item.time) && (progress < item.time + item.duration);
+                }
+            }
+        }
+    }
+}
+
+export component SettingsPanel inherits Window {
+    in property <string> song_dir;
+    in property <string> lang;
+    in property <bool> light_ui;
+    callback refresh_song_list(string);
+    callback set_lang(string);
+    callback set_light_theme(bool);
+    VerticalLayout {
+        width: 100%;
+        height: 100%;
+        alignment: center;
+        spacing: 20px;
+        HorizontalLayout {
+            alignment: center;
+            spacing: 10px;
+            Rectangle {
+                height: 30px;
+                width: 200px;
+                Text {
+                    x: parent.width - self.width;
+                    vertical-alignment: center;
+                    text: @tr("Music directory: ");
+                }
+            }
+
+            LineEdit {
+                text: song_dir;
+                width: 200px;
+                accepted(p) => {
+                    refresh_song_list(p);
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 10px;
+            Rectangle {
+                height: 30px;
+                width: 200px;
+                Text {
+                    x: parent.width - self.width;
+                    vertical-alignment: center;
+                    text: @tr("Language: ");
+                }
+            }
+
+            ComboBox {
+                width: 200px;
+                current-value: lang;
+                model: ["", "zh_CN", "es", "fr", "de", "ru"];
+                selected(current-value) => {
+                    root.set_lang(current-value);
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 10px;
+            Rectangle {
+                height: 30px;
+                width: 200px;
+                Text {
+                    x: parent.width - self.width;
+                    vertical-alignment: center;
+                    text: @tr("Light theme: ");
+                }
+            }
+
+            Switch {
+                width: 200px;
+                checked: light_ui;
+                text: self.checked ? @tr("On") : @tr("Off");
+                toggled => {
+                    root.set_light_theme(self.checked);
+                }
+            }
+        }
+    }
+}
+
 export component MainWindow inherits Window {
-    preferred-width: 800px;
-    preferred-height: 550px;
-    min-height: 550px;
-    min-width: 800px;
+    preferred-width: 850px;
+    preferred-height: 500px;
+    min-width: 850px;
+    min-height: 500px;
     title: "Zeedle";
     icon: @image-url("cover.svg");
     forward-focus: key-input-handler;
@@ -93,185 +443,52 @@ export component MainWindow inherits Window {
         Tab {
             title: @tr("Gallery");
             VerticalLayout {
-                TitleBar {
-                    ascending: UIState.sort_ascending;
-                    key: UIState.sort_key;
-                    sort-items(key, ascending) => {
-                        if (UIState.last_sort_key == key) {
-                            root.sort_song_list(key, !ascending);
-                        } else {
-                            root.sort_song_list(key, true)
-                        }
+                SongListView {
+                    ascending <=> UIState.sort_ascending;
+                    sort-key <=> UIState.sort_key;
+                    last-sort-key <=> UIState.last_sort_key;
+                    song-list <=> UIState.song_list;
+                    sort-songs(key, asc) => {
+                        root.sort_song_list(key, asc);
+                    }
+                    play-song(info, src) => {
+                        root.play(info, src);
                     }
                 }
 
-                ListView {
-                    height: 80%;
-                    width: 100%;
-                    for item in UIState.song_list: SongItem {
-                        info: item;
-                        double_clicked => {
-                            play(item, TriggerSource.ClickItem);
-                        }
-                    }
-                }
-
-                Slider {
-                    minimum: 0;
-                    maximum: UIState.duration;
-                    // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
-                    value <=> UIState.progress;
-                    released(v) => {
-                        UIState.dragging = false;
-                        change_progress(v);
+                ControlPanel {
+                    max-height: 80px;
+                    min-height: 50px;
+                    preferred-height: 60px;
+                    progress <=> UIState.progress;
+                    duration <=> UIState.duration;
+                    paused <=> UIState.paused;
+                    dragging <=> UIState.dragging;
+                    play_mode <=> UIState.play_mode;
+                    current_song <=> UIState.current_song;
+                    album_image <=> UIState.album_image;
+                    change-progress(p) => {
+                        root.change_progress(p);
                         root.focus();
                     }
-                    changed(_) => {
-                        UIState.dragging = true;
+                    toggle-play() => {
+                        root.toggle_play();
                     }
-                }
-
-                HorizontalLayout {
-                    height: 10%;
-                    alignment: center;
-                    TouchArea {
-                        width: 35%;
-                        height: 100%;
-                        double-clicked => {
-                            tabs.current-index = 1; // 切换到歌词页
-                        }
-                        HorizontalLayout {
-                            alignment: start;
-                            spacing: 3px;
-                            Rectangle {
-                                width: 20%;
-                                height: 100%;
-                                Rectangle {
-                                    width: 40px;
-                                    height: 40px;
-                                    border-radius: 4px;
-                                    clip: true;
-                                    drop-shadow-blur: 6px;
-                                    Image {
-                                        y: parent.height / 2 - self.height / 2;
-                                        width: 100%;
-                                        height: 100%;
-                                        source: UIState.album_image;
-                                        image-fit: contain;
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                width: 80%;
-                                height: 100%;
-                                Text {
-                                    width: 100%;
-                                    x: parent.width / 2 - self.width / 2;
-                                    text: UIState.current_song.song_name + " - " + UIState.current_song.singer;
-                                    vertical-alignment: center;
-                                    horizontal-alignment: center;
-                                    overflow: TextOverflow.elide;
-                                }
-                            }
-                        }
+                    play-next() => {
+                        root.play_next();
                     }
-
-                    Rectangle {
-                        width: 6%;
-                        OverlapButton {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            width: 20px;
-                            height: 20px;
-                            mode <=> UIState.play_mode;
-                            clicked => {
-                                if (UIState.play_mode == PlayMode.InOrder) {
-                                    switch_mode(PlayMode.Recursive);
-                                } else {
-                                    switch_mode(PlayMode.InOrder);
-                                }
-                            }
-                        }
+                    play-prev() => {
+                        root.play_prev();
                     }
-
-                    Rectangle {
-                        width: 6%;
-                        PrevSongButton {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            width: 20px;
-                            height: 20px;
-                            clicked => {
-                                root.play_prev();
-                            }
-                        }
+                    switch-mode(m) => {
+                        root.switch_mode(m);
                     }
-
-                    Rectangle {
-                        width: 6%;
-                        PlayPauseButton {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            width: 20px;
-                            height: 20px;
-                            // 单向绑定被用户强制改变状态后，绑定失效，不再自动更新, 所以双向绑定
-                            paused <=> UIState.paused;
-                            toggled => {
-                                root.toggle_play();
-                            }
-                        }
+                    double-clicked() => {
+                        tabs.current-index = 1; // 切换到歌词页
                     }
-
-                    Rectangle {
-                        width: 6%;
-                        NextSongButton {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            width: 20px;
-                            height: 20px;
-                            clicked => {
-                                root.play_next();
-                            }
-                        }
+                    format-duration(d) => {
+                        return root.format_duration(d);
                     }
-
-                    Rectangle {
-                        width: 6%;
-                        border-color: transparent;
-                        RandomButton {
-                            x: parent.width / 2 - self.width / 2;
-                            y: parent.height / 2 - self.height / 2;
-                            selected: UIState.play_mode == PlayMode.Random;
-                            width: 20px;
-                            height: 20px;
-                            clicked => {
-                                switch_mode(PlayMode.Random);
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 35%;
-                        TouchArea {
-                            double-clicked => {
-                                tabs.current-index = 1; // 切换到歌词页
-                            }
-                        }
-
-                        Text {
-                            x: parent.width / 2 - self.width / 2;
-                            text: format_duration(UIState.progress) + " / " + format_duration(UIState.duration);
-                            vertical-alignment: center;
-                            horizontal-alignment: center;
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 100%;
-                    height: 5px;
-                    background: transparent;
                 }
             }
         }
@@ -289,137 +506,33 @@ export component MainWindow inherits Window {
                 }
             }
 
-            HorizontalLayout {
+            LyricsPanel {
                 width: 100%;
                 height: 100%;
-                VerticalLayout {
-                    width: 30%;
-                    alignment: center;
-                    lyric-image := Rectangle {
-                        x: parent.width / 2 - self.width / 2;
-                        width: 180px;
-                        height: self.width;
-                        clip: true;
-                        border-radius: 8px;
-                        drop-shadow-blur: 8px;
-                        Image {
-                            width: 100%;
-                            height: 100%;
-                            source: UIState.album_image;
-                        }
-                    }
-
-                    Text {
-                        width: 100%;
-                        height: 25px;
-                        font-size: 13px;
-                        x: lyric-image.x;
-                        vertical-alignment: bottom;
-                        text: @tr("Artist: {}", UIState.current_song.singer);
-                        overflow: elide;
-                    }
-
-                    Text {
-                        width: 100%;
-                        height: 25px;
-                        font-size: 13px;
-                        x: lyric-image.x;
-                        vertical-alignment: bottom;
-                        text: @tr("Title: {}", UIState.current_song.song_name);
-                        overflow: elide;
-                    }
-                }
-
-                VerticalLayout {
-                    width: 70%;
-                    alignment: center;
-                    ListView {
-                        height: 100%;
-                        width: 100%;
-                        mouse-drag-pan-enabled: false;
-                        viewport-y <=> UIState.lyric_viewport_y;
-                        for item in UIState.lyrics: LyricLine {
-                            content: item.text;
-                            playing: (UIState.progress >= item.time) && (UIState.progress < item.time + item.duration);
-                        }
-                    }
-                }
+                album_image <=> UIState.album_image;
+                current_song <=> UIState.current_song;
+                lyrics <=> UIState.lyrics;
+                progress <=> UIState.progress;
+                lyric_viewport_y <=> UIState.lyric_viewport_y;
             }
         }
 
         Tab {
             title: @tr("Settings");
-            VerticalLayout {
+            SettingsPanel {
                 width: 100%;
                 height: 100%;
-                alignment: center;
-                spacing: 20px;
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 10px;
-                    Rectangle {
-                        height: 30px;
-                        width: 200px;
-                        Text {
-                            x: parent.width - self.width;
-                            vertical-alignment: center;
-                            text: @tr("Music directory: ");
-                        }
-                    }
-
-                    LineEdit {
-                        text <=> UIState.song_dir;
-                        width: 200px;
-                        accepted(p) => {
-                            refresh_song_list(p);
-                        }
-                    }
+                song_dir <=> UIState.song_dir;
+                lang <=> UIState.lang;
+                light_ui <=> UIState.light_ui;
+                refresh_song_list(p) => {
+                    root.refresh_song_list(p);
                 }
-
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 10px;
-                    Rectangle {
-                        height: 30px;
-                        width: 200px;
-                        Text {
-                            x: parent.width - self.width;
-                            vertical-alignment: center;
-                            text: @tr("Language: ");
-                        }
-                    }
-
-                    ComboBox {
-                        width: 200px;
-                        current-value <=> UIState.lang;
-                        model: ["", "zh_CN", "es", "fr", "de", "ru"];
-                        selected(current-value) => {
-                            root.set_lang(current-value);
-                        }
-                    }
+                set_lang(l) => {
+                    root.set_lang(l);
                 }
-
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 10px;
-                    Rectangle {
-                        height: 30px;
-                        width: 200px;
-                        Text {
-                            x: parent.width - self.width;
-                            vertical-alignment: center;
-                            text: @tr("Light theme: ");
-                        }
-                    }
-
-                    light-switch := Switch {
-                        width: 200px;
-                        checked <=> UIState.light_ui;
-                        text: self.checked ? @tr("On") : @tr("Off");
-                        toggled => {
-                            root.set_light_theme(self.checked);
-                        }
-                    }
+                set_light_theme(yes) => {
+                    root.set_light_theme(yes);
                 }
             }
         }
