@@ -1,7 +1,7 @@
 use std::{
     fs,
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use env_logger::Target;
@@ -25,7 +25,7 @@ impl Write for MultiWriter {
 }
 
 fn get_log_path() -> PathBuf {
-    let f_name = "vanilla-player.log";
+    let f_name = ".zeedle.log";
     if let Some(mut p) = home::home_dir() {
         p.push(f_name);
         p
@@ -34,8 +34,12 @@ fn get_log_path() -> PathBuf {
     }
 }
 
-pub fn init_default_logger() {
-    let log_path = get_log_path();
+pub fn init_default_logger(path: Option<impl AsRef<Path>>) {
+    let log_path = if let Some(p) = path {
+        p.as_ref().to_path_buf()
+    } else {
+        get_log_path()
+    };
     if log_path.exists() {
         if fs::metadata(&log_path).unwrap().len() > 1024 * 1024 * 10 {
             fs::remove_file(&log_path).expect("Failed to remove old log file");
