@@ -332,9 +332,9 @@ export component LyricsPanel inherits Window {
 }
 
 export component SettingsPanel inherits Window {
-    in property <string> song_dir;
-    in property <string> lang;
-    in property <bool> light_ui;
+    in-out property <string> song_dir;
+    in-out property <string> lang;
+    in-out property <bool> light_ui;
     callback refresh_song_list(string);
     callback set_lang(string);
     callback set_light_theme(bool);
@@ -357,7 +357,7 @@ export component SettingsPanel inherits Window {
             }
 
             LineEdit {
-                text: song_dir;
+                text <=> song_dir;
                 width: 200px;
                 accepted(p) => {
                     refresh_song_list(p);
@@ -380,7 +380,7 @@ export component SettingsPanel inherits Window {
 
             ComboBox {
                 width: 200px;
-                current-value: lang;
+                current-value <=> lang;
                 model: ["", "zh_CN", "es", "fr", "de", "ru"];
                 selected(current-value) => {
                     root.set_lang(current-value);
@@ -403,7 +403,7 @@ export component SettingsPanel inherits Window {
 
             Switch {
                 width: 200px;
-                checked: light_ui;
+                checked <=> light_ui;
                 text: self.checked ? @tr("On") : @tr("Off");
                 toggled => {
                     root.set_light_theme(self.checked);
