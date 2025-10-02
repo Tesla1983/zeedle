@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use globset::GlobBuilder;
 use lofty::{
@@ -16,13 +16,14 @@ use walkdir::WalkDir;
 use crate::slint_types::{LyricItem, SongInfo, SortKey};
 
 /// Read meta info from audio file `fp`, return a SongInfo
-pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
-    if let Ok(tagged) = lofty::read_from_path(fp) {
+pub fn read_meta_info(path: impl AsRef<Path>) -> Option<SongInfo> {
+    let path = path.as_ref();
+    if let Ok(tagged) = lofty::read_from_path(path) {
         let dura = tagged.properties().duration().as_secs_f32();
         if let Some(tag) = tagged.primary_tag() {
             let song_name = tag.title();
             let song_name = song_name.as_deref().unwrap_or(
-                fp.file_stem()
+                path.file_stem()
                     .map(|x| x.to_str())
                     .flatten()
                     .unwrap_or("unknown"),
@@ -32,7 +33,7 @@ pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
 
             let item = SongInfo {
                 id: 0,
-                song_path: fp.display().to_shared_string(),
+                song_path: path.display().to_shared_string(),
                 song_name: song_name.into(),
                 singer: singer_name.into(),
                 duration: format!("{:02}:{:02}", (dura as u32) / 60, (dura as u32) % 60)
@@ -45,7 +46,8 @@ pub fn read_meta_info(fp: &PathBuf) -> Option<SongInfo> {
 }
 
 /// Scan songs in Path `p` and return a list of SongInfo
-pub fn read_song_list(audio_dir: PathBuf, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
+pub fn read_song_list(audio_dir: impl AsRef<Path>, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
+    let audio_dir = audio_dir.as_ref();
     if !audio_dir.exists() {
         return Vec::new();
     }
@@ -87,8 +89,9 @@ pub fn read_song_list(audio_dir: PathBuf, sort_key: SortKey, ascending: bool) ->
 }
 
 /// Read lyrics from audio file `p`, return a list of LyricItem
-pub fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
-    if let Ok(tagged) = lofty::read_from_path(&p) {
+pub fn read_lyrics(path: impl AsRef<Path>) -> Vec<LyricItem> {
+    let path = path.as_ref();
+    if let Ok(tagged) = lofty::read_from_path(path) {
         if let Some(tag) = tagged.primary_tag() {
             if let Some(lyric_item) = tag.get(&ItemKey::Lyrics) {
                 let mut lyrics = lyric_item
@@ -125,8 +128,9 @@ pub fn read_lyrics(p: PathBuf) -> Vec<LyricItem> {
 }
 
 /// Read album cover from audio file `p`, return a slint::Image
-pub fn read_album_cover(p: PathBuf) -> Option<(Vec<u8>, u32, u32)> {
-    if let Ok(tagged) = lofty::read_from_path(&p) {
+pub fn read_album_cover(path: impl AsRef<Path>) -> Option<(Vec<u8>, u32, u32)> {
+    let path = path.as_ref();
+    if let Ok(tagged) = lofty::read_from_path(path) {
         if let Some(tag) = tagged.primary_tag() {
             if let Some(picture) = tag.pictures().iter().find(|pic| {
                 pic.pic_type() == PictureType::CoverFront

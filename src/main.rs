@@ -66,7 +66,7 @@ fn set_raw_ui_state(ui: &MainWindow) {
 fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     let ui_state = ui.global::<UIState>();
     let cfg = Config::load();
-    let song_list = utils::read_song_list(cfg.song_dir.clone(), cfg.sort_key, cfg.sort_ascending);
+    let song_list = utils::read_song_list(&cfg.song_dir, cfg.sort_key, cfg.sort_ascending);
     if song_list.is_empty() {
         log::warn!(
             "song list is empty in directory: {:?}, using default UI state ...",
@@ -114,11 +114,11 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     ui_state.set_duration(dura);
     ui_state.set_current_song(cur_song_info.clone());
     ui_state.set_lyrics(
-        utils::read_lyrics(cur_song_info.song_path.as_str().into())
+        utils::read_lyrics(&cur_song_info.song_path)
             .as_slice()
             .into(),
     );
-    let cover = utils::read_album_cover(cur_song_info.song_path.as_str().into());
+    let cover = utils::read_album_cover(&cur_song_info.song_path);
     let cover = match cover {
         Some((buffer, width, height)) => utils::from_image_to_slint(buffer, width, height),
         None => utils::get_default_album_cover(),
@@ -139,7 +139,7 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
 
 fn main() {
     let app_start = Instant::now();
-    logger::init_default_logger();
+    logger::init_default_logger(None::<PathBuf>);
     // when panics happen, auto port errors to log
     std::panic::set_hook(Box::new(|info| {
         log::error!("{}", info);
@@ -174,7 +174,7 @@ fn main() {
                     let file = std::fs::File::open(&song_info.song_path)
                         .expect("failed to open audio file");
                     let source = Decoder::try_from(file).expect("failed to decode audio file");
-                    let lyrics = utils::read_lyrics(song_info.song_path.as_str().into());
+                    let lyrics = utils::read_lyrics(&song_info.song_path);
                     let dura = source
                         .total_duration()
                         .map(|d| d.as_secs_f32())
@@ -184,7 +184,7 @@ fn main() {
                     sink_guard.append(source);
                     sink_guard.play();
                     log::info!("start playing: <{}>", song_info.song_name);
-                    let cover = utils::read_album_cover(song_info.song_path.as_str().into());
+                    let cover = utils::read_album_cover(&song_info.song_path);
                     let ui_weak = ui_weak.clone();
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
@@ -391,7 +391,7 @@ fn main() {
                     .unwrap();
                 }
                 PlayerCommand::RefreshSongList(path) => {
-                    let new_list = utils::read_song_list(path.clone(), SortKey::BySongName, true);
+                    let new_list = utils::read_song_list(&path, SortKey::BySongName, true);
                     let ui_weak = ui_weak.clone();
                     let sink_clone = sink_clone.clone();
                     slint::invoke_from_event_loop(move || {
