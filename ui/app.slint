@@ -9,7 +9,7 @@ export struct LyricItem {
     time: float,
     duration: float,
     text: string,
-} 
+}
 
 // trigger source
 export enum TriggerSource {
@@ -456,6 +456,36 @@ export component MainWindow inherits Window {
                     }
                 }
 
+                key-input-handler := FocusScope {
+                    width: 0px;
+                    height: 0px;
+                    key-released(event) => {
+                        if event.text == Key.Space {
+                            root.toggle_play();
+                            return accept;
+                        } else if event.text == Key.RightArrow || event.text == Key.DownArrow {
+                            root.play_next();
+                            return accept;
+                        } else if event.text == Key.LeftArrow || event.text == Key.UpArrow {
+                            root.play_prev();
+                            return accept;
+                        } else if event.text == Key.F1 {
+                            tabs.current-index = 0;
+                            return accept;
+                        } else if event.text == Key.F2 {
+                            tabs.current-index = 1;
+                            return accept;
+                        } else if event.text == Key.F3 {
+                            tabs.current-index = 2;
+                            return accept;
+                        } else if event.text == Key.F4 {
+                            tabs.current-index = 3;
+                            return accept;
+                        }
+                        return reject;
+                    }
+                }
+
                 ControlPanel {
                     max-height: 80px;
                     min-height: 50px;
@@ -547,34 +577,6 @@ export component MainWindow inherits Window {
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
-        }
-    }
-
-    key-input-handler := FocusScope {
-        key-released(event) => {
-            if event.text == Key.Space {
-                root.toggle_play();
-                return accept;
-            } else if event.text == Key.RightArrow || event.text == Key.DownArrow {
-                root.play_next();
-                return accept;
-            } else if event.text == Key.LeftArrow || event.text == Key.UpArrow {
-                root.play_prev();
-                return accept;
-            } else if event.text == Key.F1 {
-                tabs.current-index = 0;
-                return accept;
-            } else if event.text == Key.F2 {
-                tabs.current-index = 1;
-                return accept;
-            } else if event.text == Key.F3 {
-                tabs.current-index = 2;
-                return accept;
-            } else if event.text == Key.F4 {
-                tabs.current-index = 3;
-                return accept;
-            }
-            return reject;
         }
     }
 }
