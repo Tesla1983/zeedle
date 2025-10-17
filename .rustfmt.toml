@@ -1,0 +1,14 @@
+# 强制多行风格，更整齐
+use_small_heuristics = "Off"
+
+# 结构体字面量永远多行
+struct_lit_single_line = false
+
+# 确保多行结构结尾有逗号
+trailing_comma = "Vertical"
+
+# 合并同源导入
+imports_granularity = "Crate"
+
+# 按顺序整理不同来源的导入
+group_imports = "StdExternalCrate"
