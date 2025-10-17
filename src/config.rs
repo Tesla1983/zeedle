@@ -4,9 +4,7 @@ use crate::slint_types::{PlayMode, SortKey};
 
 /// Get config file path
 fn get_cfg_path() -> PathBuf {
-    home::home_dir()
-        .expect("no home directory found")
-        .join(".config/zeedle/config.toml")
+    home::home_dir().expect("no home directory found").join(".config/zeedle/config.toml")
 }
 
 /// Used to save/recover ui state
@@ -24,9 +22,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            song_dir: home::home_dir()
-                .expect("no home directory found")
-                .join("Music"),
+            song_dir: home::home_dir().expect("no home directory found").join("Music"),
             current_song_path: None,
             progress: 0.0,
             play_mode: PlayMode::InOrder,

@@ -8,7 +8,7 @@ fn main() {
         .open_stream()
         .expect("failed to open output stream");
     // create a sink to play audio
-    let sink = rodio::Sink::connect_new(&stream_handle.mixer());
+    let sink = rodio::Sink::connect_new(stream_handle.mixer());
     // open an audio file
     let file = std::fs::File::open("audios/爱情转移.flac").expect("failed to open audio file");
     // decode the audio file

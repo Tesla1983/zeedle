@@ -1,13 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::{
+    cmp::Reverse,
+    path::PathBuf,
+    sync::{Arc, Mutex, mpsc},
+    thread,
+    time::{Duration, Instant},
+};
+
 use rand::Rng;
 use rayon::slice::ParallelSliceMut;
 use rodio::{Decoder, Source, cpal};
 use slint::{Model, ToSharedString};
-use std::cmp::Reverse;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex, mpsc};
-use std::thread;
-use std::time::{Duration, Instant};
 mod slint_types;
 use slint_types::*;
 mod config;
@@ -49,11 +52,7 @@ fn set_raw_ui_state(ui: &MainWindow) {
     ui_state.set_lyrics(Vec::new().as_slice().into());
     ui_state.set_song_list(Vec::new().as_slice().into());
     ui_state.set_song_dir(
-        Config::default()
-            .song_dir
-            .to_str()
-            .expect("failed to convert Path to String")
-            .into(),
+        Config::default().song_dir.to_str().expect("failed to convert Path to String").into(),
     );
     ui_state.set_play_mode(PlayMode::InOrder);
     ui_state.set_paused(true);
@@ -75,11 +74,7 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
         set_raw_ui_state(ui);
         return;
     }
-    log::info!(
-        "loaded {} songs from directory: {:?}",
-        song_list.len(),
-        cfg.song_dir
-    );
+    log::info!("loaded {} songs from directory: {:?}", song_list.len(), cfg.song_dir);
     ui.invoke_set_light_theme(cfg.light_ui);
     ui_state.set_sort_key(cfg.sort_key);
     ui_state.set_sort_ascending(cfg.sort_ascending);
@@ -89,18 +84,12 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     ui_state.set_play_mode(cfg.play_mode);
     ui_state.set_lang(cfg.lang.clone().into());
     slint::select_bundled_translation(&cfg.lang)
-        .expect(format!("failed to set language: {}", cfg.lang).as_str());
+        .unwrap_or_else(|_| panic!("failed to set language: {}", cfg.lang));
     ui_state.set_song_list(song_list.as_slice().into());
-    ui_state.set_song_dir(
-        cfg.song_dir
-            .to_str()
-            .expect("failed to convert Path to String")
-            .into(),
-    );
+    ui_state.set_song_dir(cfg.song_dir.to_str().expect("failed to convert Path to String").into());
     ui_state.set_about_info(utils::get_about_info());
     let cur_song_info = utils::read_meta_info(
-        &cfg.current_song_path
-            .unwrap_or(song_list[0].song_path.as_str().into()),
+        cfg.current_song_path.unwrap_or(song_list[0].song_path.as_str().into()),
     )
     .expect("failed to read meta info of current song");
     let dura = cur_song_info
@@ -113,11 +102,7 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
         .unwrap_or(0.);
     ui_state.set_duration(dura);
     ui_state.set_current_song(cur_song_info.clone());
-    ui_state.set_lyrics(
-        utils::read_lyrics(&cur_song_info.song_path)
-            .as_slice()
-            .into(),
-    );
+    ui_state.set_lyrics(utils::read_lyrics(&cur_song_info.song_path).as_slice().into());
     let cover = utils::read_album_cover(&cur_song_info.song_path);
     let cover = match cover {
         Some((buffer, width, height)) => utils::from_image_to_slint(buffer, width, height),
@@ -125,12 +110,11 @@ fn set_start_ui_state(ui: &MainWindow, sink: &rodio::Sink) {
     };
     ui_state.set_album_image(cover);
     let file = std::fs::File::open(&cur_song_info.song_path)
-        .expect(format!("failed to open audio file: {}", cur_song_info.song_path).as_str());
+        .unwrap_or_else(|_| panic!("failed to open audio file: {}", cur_song_info.song_path));
     let source = Decoder::try_from(file).expect("failed to decode audio file");
     sink.append(source);
     sink.pause();
-    sink.try_seek(Duration::from_secs_f32(cfg.progress))
-        .expect("failed to seek to given position");
+    sink.try_seek(Duration::from_secs_f32(cfg.progress)).expect("failed to seek to given position");
     let mut history = ui_state.get_play_history().iter().collect::<Vec<_>>();
     history.push(cur_song_info.clone());
     ui_state.set_play_history(history.as_slice().into());
@@ -155,7 +139,7 @@ fn main() {
         .open_stream()
         .expect("failed to open output stream");
     stream_handle.log_on_drop(false);
-    let _sink = rodio::Sink::connect_new(&stream_handle.mixer());
+    let _sink = rodio::Sink::connect_new(stream_handle.mixer());
     let sink = Arc::new(Mutex::new(_sink));
     // 创建消息通道 ui --> backend
     let (tx, rx) = mpsc::channel::<PlayerCommand>();
@@ -175,10 +159,7 @@ fn main() {
                         .expect("failed to open audio file");
                     let source = Decoder::try_from(file).expect("failed to decode audio file");
                     let lyrics = utils::read_lyrics(&song_info.song_path);
-                    let dura = source
-                        .total_duration()
-                        .map(|d| d.as_secs_f32())
-                        .unwrap_or(0.0);
+                    let dura = source.total_duration().map(|d| d.as_secs_f32()).unwrap_or(0.0);
                     let sink_guard = sink_clone.lock().unwrap();
                     sink_guard.clear();
                     sink_guard.append(source);
@@ -333,8 +314,11 @@ fn main() {
                                 let mut rng = rand::rng();
                                 let next_id1 = rng.random_range(..song_list.len());
                                 let id = ui_state.get_current_song().id as usize;
-                                let mut next_id2 =
-                                    if id + 1 >= song_list.len() { 0 } else { id + 1 };
+                                let mut next_id2 = if id + 1 >= song_list.len() {
+                                    0
+                                } else {
+                                    id + 1
+                                };
                                 next_id2 = next_id2.min(song_list.len() - 1);
                                 let next_id = match ui_state.get_play_mode() {
                                     PlayMode::InOrder => next_id2,
@@ -445,10 +429,7 @@ fn main() {
                                     }
                                 }
                             }
-                            song_list
-                                .iter_mut()
-                                .enumerate()
-                                .for_each(|(i, x)| x.id = i as i32);
+                            song_list.iter_mut().enumerate().for_each(|(i, x)| x.id = i as i32);
                             let new_cur_song = song_list
                                 .iter()
                                 .find(|x| x.song_path == ui_state.get_current_song().song_path)
@@ -483,21 +464,15 @@ fn main() {
     {
         let tx = tx.clone();
         ui.on_play(move |song_info: SongInfo, trigger: TriggerSource| {
-            log::info!(
-                "request to play: <{}> from source <{:?}>",
-                song_info.song_name,
-                trigger
-            );
-            tx.send(PlayerCommand::Play(song_info, trigger))
-                .expect("failed to send play command");
+            log::info!("request to play: <{}> from source <{:?}>", song_info.song_name, trigger);
+            tx.send(PlayerCommand::Play(song_info, trigger)).expect("failed to send play command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_toggle_play(move || {
             log::info!("request to toggle play/pause");
-            tx.send(PlayerCommand::Pause)
-                .expect("failed to send pause command");
+            tx.send(PlayerCommand::Pause).expect("failed to send pause command");
         });
     }
     {
@@ -512,16 +487,14 @@ fn main() {
         let tx = tx.clone();
         ui.on_play_next(move || {
             log::info!("request to play next");
-            tx.send(PlayerCommand::PlayNext)
-                .expect("failed to send play next command");
+            tx.send(PlayerCommand::PlayNext).expect("failed to send play next command");
         });
     }
     {
         let tx = tx.clone();
         ui.on_play_prev(move || {
             log::info!("request to play prev");
-            tx.send(PlayerCommand::PlayPrev)
-                .expect("failed to send play prev command");
+            tx.send(PlayerCommand::PlayPrev).expect("failed to send play prev command");
         });
     }
     {
@@ -543,11 +516,7 @@ fn main() {
     {
         let tx = tx.clone();
         ui.on_sort_song_list(move |key, ascending| {
-            log::info!(
-                "request to sort song list by: {:?}, ascending: {}",
-                key,
-                ascending
-            );
+            log::info!("request to sort song list by: {:?}, ascending: {}", key, ascending);
             tx.send(PlayerCommand::SortSongList(key, ascending))
                 .expect("failed to send sort song list command");
         });
@@ -568,41 +537,37 @@ fn main() {
     let ui_weak = ui.as_weak();
     let timer = slint::Timer::default();
     let sink_clone = sink.clone();
-    timer.start(
-        slint::TimerMode::Repeated,
-        Duration::from_millis(200),
-        move || {
-            let sink_guard = sink_clone.lock().unwrap();
-            if let Some(ui) = ui_weak.upgrade() {
-                // 如果不在拖动进度条，则自增进度条
-                let ui_state = ui.global::<UIState>();
-                if !ui_state.get_dragging() {
-                    ui_state.set_progress(sink_guard.get_pos().as_secs_f32());
-                }
-                if !ui_state.get_paused() {
-                    for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
-                        let delta = item.time - ui_state.get_progress();
-                        if delta < 0. && delta > -0.20 {
-                            if idx <= 5 {
-                                ui_state.set_lyric_viewport_y(0.)
-                            } else {
-                                ui_state.set_lyric_viewport_y(
-                                    (5 as f32 - idx as f32) * ui_state.get_lyric_line_height(),
-                                );
-                            }
-                            log::debug!("lyric changed to: <{:?}>", item);
-                            break;
+    timer.start(slint::TimerMode::Repeated, Duration::from_millis(200), move || {
+        let sink_guard = sink_clone.lock().unwrap();
+        if let Some(ui) = ui_weak.upgrade() {
+            // 如果不在拖动进度条，则自增进度条
+            let ui_state = ui.global::<UIState>();
+            if !ui_state.get_dragging() {
+                ui_state.set_progress(sink_guard.get_pos().as_secs_f32());
+            }
+            if !ui_state.get_paused() {
+                for (idx, item) in ui_state.get_lyrics().iter().enumerate() {
+                    let delta = item.time - ui_state.get_progress();
+                    if delta < 0. && delta > -0.20 {
+                        if idx <= 5 {
+                            ui_state.set_lyric_viewport_y(0.)
+                        } else {
+                            ui_state.set_lyric_viewport_y(
+                                (5_f32 - idx as f32) * ui_state.get_lyric_line_height(),
+                            );
                         }
+                        log::debug!("lyric changed to: <{:?}>", item);
+                        break;
                     }
                 }
-                // 如果播放完毕，且之前是在播放状态，则自动播放下一首
-                if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
-                    ui.invoke_play_next();
-                    log::info!("song ended, auto play next");
-                }
             }
-        },
-    );
+            // 如果播放完毕，且之前是在播放状态，则自动播放下一首
+            if sink_guard.empty() && ui_state.get_user_listening() && !ui_state.get_paused() {
+                ui.invoke_play_next();
+                log::info!("song ended, auto play next");
+            }
+        }
+    });
 
     // 显示 UI
     log::info!("ui state initialized, take: {:?}", app_start.elapsed());

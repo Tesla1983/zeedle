@@ -22,12 +22,9 @@ pub fn read_meta_info(path: impl AsRef<Path>) -> Option<SongInfo> {
         let dura = tagged.properties().duration().as_secs_f32();
         if let Some(tag) = tagged.primary_tag() {
             let song_name = tag.title();
-            let song_name = song_name.as_deref().unwrap_or(
-                path.file_stem()
-                    .map(|x| x.to_str())
-                    .flatten()
-                    .unwrap_or("unknown"),
-            );
+            let song_name = song_name
+                .as_deref()
+                .unwrap_or(path.file_stem().and_then(|x| x.to_str()).unwrap_or("unknown"));
             let singer_name = tag.artist();
             let singer_name = singer_name.as_deref().unwrap_or("unknown");
 
@@ -46,15 +43,16 @@ pub fn read_meta_info(path: impl AsRef<Path>) -> Option<SongInfo> {
 }
 
 /// Scan songs in Path `p` and return a list of SongInfo
-pub fn read_song_list(audio_dir: impl AsRef<Path>, sort_key: SortKey, ascending: bool) -> Vec<SongInfo> {
+pub fn read_song_list(
+    audio_dir: impl AsRef<Path>,
+    sort_key: SortKey,
+    ascending: bool,
+) -> Vec<SongInfo> {
     let audio_dir = audio_dir.as_ref();
     if !audio_dir.exists() {
         return Vec::new();
     }
-    let glober = GlobBuilder::new("**/*.{mp3,flac,wav,ogg}")
-        .build()
-        .unwrap()
-        .compile_matcher();
+    let glober = GlobBuilder::new("**/*.{mp3,flac,wav,ogg}").build().unwrap().compile_matcher();
     let entries = WalkDir::new(audio_dir)
         .into_iter()
         .filter_map(|x| x.ok())
@@ -62,7 +60,7 @@ pub fn read_song_list(audio_dir: impl AsRef<Path>, sort_key: SortKey, ascending:
         .collect::<Vec<_>>();
     let mut songs = entries
         .into_par_iter()
-        .map(|entry| read_meta_info(&entry.path().to_path_buf()))
+        .map(|entry| read_meta_info(entry.path()))
         .flatten()
         .collect::<Vec<_>>();
     if ascending {
@@ -91,59 +89,57 @@ pub fn read_song_list(audio_dir: impl AsRef<Path>, sort_key: SortKey, ascending:
 /// Read lyrics from audio file `p`, return a list of LyricItem
 pub fn read_lyrics(path: impl AsRef<Path>) -> Vec<LyricItem> {
     let path = path.as_ref();
-    if let Ok(tagged) = lofty::read_from_path(path) {
-        if let Some(tag) = tagged.primary_tag() {
-            if let Some(lyric_item) = tag.get(&ItemKey::Lyrics) {
-                let mut lyrics = lyric_item
-                    .value()
-                    .text()
-                    .unwrap()
-                    .split("\n")
-                    .map(|line| {
-                        let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
-                        let time_str = time_str.trim_start_matches('[');
-                        let dura = time_str
-                            .split(':')
-                            .map(|x| x.parse::<f32>().unwrap_or(0.))
-                            .rev()
-                            .reduce(|acc, x| acc + x * 60.)
-                            .unwrap_or(0.);
-                        LyricItem {
-                            time: dura,
-                            text: text.to_shared_string(),
-                            duration: 0.0,
-                        }
-                    })
-                    .filter(|ins| ins.time > 0. && !ins.text.is_empty())
-                    .collect::<Vec<_>>();
-                for i in 0..lyrics.len() - 1 {
-                    lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
+    if let Ok(tagged) = lofty::read_from_path(path)
+        && let Some(tag) = tagged.primary_tag()
+        && let Some(lyric_item) = tag.get(&ItemKey::Lyrics)
+    {
+        let mut lyrics = lyric_item
+            .value()
+            .text()
+            .unwrap()
+            .split("\n")
+            .map(|line| {
+                let (time_str, text) = line.split_once(']').unwrap_or(("", ""));
+                let time_str = time_str.trim_start_matches('[');
+                let dura = time_str
+                    .split(':')
+                    .map(|x| x.parse::<f32>().unwrap_or(0.))
+                    .rev()
+                    .reduce(|acc, x| acc + x * 60.)
+                    .unwrap_or(0.);
+                LyricItem {
+                    time: dura,
+                    text: text.to_shared_string(),
+                    duration: 0.0,
                 }
-                lyrics.last_mut().map(|ins| ins.duration = 100.0);
-                return lyrics;
-            }
+            })
+            .filter(|ins| ins.time > 0. && !ins.text.is_empty())
+            .collect::<Vec<_>>();
+        for i in 0..lyrics.len() - 1 {
+            lyrics[i].duration = lyrics[i + 1].time - lyrics[i].time;
         }
+        if let Some(ins) = lyrics.last_mut() {
+            ins.duration = 100.0;
+        }
+        return lyrics;
     }
-    return Vec::new();
+    Vec::new()
 }
 
 /// Read album cover from audio file `p`, return a slint::Image
 pub fn read_album_cover(path: impl AsRef<Path>) -> Option<(Vec<u8>, u32, u32)> {
     let path = path.as_ref();
-    if let Ok(tagged) = lofty::read_from_path(path) {
-        if let Some(tag) = tagged.primary_tag() {
-            if let Some(picture) = tag.pictures().iter().find(|pic| {
-                pic.pic_type() == PictureType::CoverFront
-                    || pic.pic_type() == PictureType::CoverBack
-            }) {
-                if let Ok(img) = image::load_from_memory(picture.data()) {
-                    let rgba = img.into_rgba8();
-                    let (width, height) = rgba.dimensions();
-                    let buffer = rgba.into_vec();
-                    return Some((buffer, width, height));
-                }
-            }
-        }
+    if let Ok(tagged) = lofty::read_from_path(path)
+        && let Some(tag) = tagged.primary_tag()
+        && let Some(picture) = tag.pictures().iter().find(|pic| {
+            pic.pic_type() == PictureType::CoverFront || pic.pic_type() == PictureType::CoverBack
+        })
+        && let Ok(img) = image::load_from_memory(picture.data())
+    {
+        let rgba = img.into_rgba8();
+        let (width, height) = rgba.dimensions();
+        let buffer = rgba.into_vec();
+        return Some((buffer, width, height));
     }
     None
 }
@@ -152,7 +148,7 @@ pub fn from_image_to_slint(buffer: Vec<u8>, width: u32, height: u32) -> slint::I
     let mut pixel_buffer = slint::SharedPixelBuffer::new(width, height);
     let pixel_buffer_data = pixel_buffer.make_mut_bytes();
     pixel_buffer_data.copy_from_slice(&buffer);
-    return slint::Image::from_rgba8(pixel_buffer);
+    slint::Image::from_rgba8(pixel_buffer)
 }
 
 pub fn get_default_album_cover() -> slint::Image {

@@ -40,14 +40,11 @@ pub fn init_default_logger(path: Option<impl AsRef<Path>>) {
     } else {
         get_log_path()
     };
-    if log_path.exists() {
-        if fs::metadata(&log_path).unwrap().len() > 1024 * 1024 * 10 {
-            fs::remove_file(&log_path).expect("Failed to remove old log file");
-        }
+    if log_path.exists() && fs::metadata(&log_path).unwrap().len() > 1024 * 1024 * 10 {
+        fs::remove_file(&log_path).expect("Failed to remove old log file");
     }
     let log_file = fs::OpenOptions::new()
         .create(true)
-        .write(true)
         .append(true)
         .open(&log_path)
         .expect("can't open this file!");
